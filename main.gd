@@ -503,7 +503,7 @@ func _show_menu() -> void:
 
 func _rebuild_stage(stage_id: int) -> void:
 	arena_root.rotation.y = float(stage_id - 1) * 0.12
-	var tint := [
+	var tint: Color = [
 		Color("#38d9ff"),
 		Color("#8c65ff"),
 		Color("#ff4f9a")
@@ -513,7 +513,7 @@ func _rebuild_stage(stage_id: int) -> void:
 			light.light_color = tint
 	for marker in lod_nodes:
 		if is_instance_valid(marker) and marker is MeshInstance3D:
-			var m := marker.mesh
+			var m: Mesh = marker.mesh
 			if m and m is BoxMesh and m.material is StandardMaterial3D:
 				var material: StandardMaterial3D = m.material
 				material.emission = tint
@@ -523,7 +523,7 @@ func _rebuild_stage(stage_id: int) -> void:
 func _start_wave() -> void:
 	wave += 1
 	wave_timer = 16.0
-	var count := min(20, 3 + stage * 2 + wave)
+	var count: int = min(20, 3 + stage * 2 + wave)
 	var difficulty := 0.9 + stage * 0.55 + wave * 0.18
 	if stage == 3 and wave == 4:
 		_spawn_enemy("juggernaut", difficulty + 1.5, true)
@@ -833,7 +833,7 @@ func _profile_performance(delta: float) -> void:
 	if profile_timer >= 0.5:
 		profile_timer = 0.0
 		fps_value = Engine.get_frames_per_second()
-		var frame_ms := 1000.0 / max(1.0, fps_value)
+		var frame_ms: float = 1000.0 / max(1.0, fps_value)
 		if profile_label:
 			profile_label.text = "FPS %d  |  %.1f ms  |  Q%d" % [int(fps_value), frame_ms, quality_level + 1]
 	if auto_quality_timer >= 5.0:
