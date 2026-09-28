@@ -73,14 +73,10 @@ jobs:
           keytool -genkeypair -v             -keystore "$HOME/.android/debug.keystore"             -storepass android             -alias androiddebugkey             -keypass android             -keyalg RSA -keysize 2048 -validity 10000             -dname "CN=Android Debug,O=Android,C=US"
 
       - name: Validate Godot project
-        env:
-          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /home/runner/.android/debug.keystore
-          GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
-          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
           set -Eeuo pipefail
-          "$GODOT_BIN" --headless --path . --editor --quit 2>&1 | tee "$RUNNER_TEMP/godot-validate.log"
-          ! grep -Eiq "ERROR|FAILED|EXCEPTION|FATAL|CRITICAL" "$RUNNER_TEMP/godot-validate.log"
+          "$GODOT_BIN" --headless --path . --quit-after 120 2>&1 | tee "$RUNNER_TEMP/godot-validate.log"
+          ! grep -Eiq "SCRIPT ERROR|PARSE ERROR|ERROR|FAILED|EXCEPTION|FATAL|CRITICAL|WARNING|DEPRECATED" "$RUNNER_TEMP/godot-validate.log"
 
       - name: Export debug APK
         env:
