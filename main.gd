@@ -534,6 +534,8 @@ func _create_touch_controls() -> void:
 	joystick.custom_minimum_size = Vector2(216, 216)
 	joystick.mouse_filter = Control.MOUSE_FILTER_STOP
 	touch_root.add_child(joystick)
+	joystick.value_changed.connect(_on_joystick_changed)
+	joystick.released.connect(_on_joystick_released)
 	touch_controls.append(joystick)
 
 	fire_button = _button("FIRE", Vector2(168, 104), 23)
@@ -1054,32 +1056,8 @@ func _input(event: InputEvent) -> void:
 				_start_game_pressed()
 				get_viewport().set_input_as_handled()
 		return
-	if game_over or get_tree().paused or not joystick:
-		return
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			if joystick_touch_pointer == -1 and joystick.get_global_rect().has_point(event.position):
-				joystick_touch_pointer = event.index
-				var local_position: Vector2 = joystick.get_global_transform().affine_inverse() * event.position
-				var center: Vector2 = joystick.size * 0.5
-				var radius: float = float(joystick.get("stick_radius"))
-				var value: Vector2 = (local_position - center).limit_length(radius) / radius
-				joystick.call("set_virtual_value", value)
-				player.set_move_input(value)
-				get_viewport().set_input_as_handled()
-		elif event.index == joystick_touch_pointer:
-			joystick_touch_pointer = -1
-			joystick.call("set_virtual_value", Vector2.ZERO)
-			player.clear_move_input()
-			get_viewport().set_input_as_handled()
-	elif event is InputEventScreenDrag and event.index == joystick_touch_pointer:
-		var local_position: Vector2 = joystick.get_global_transform().affine_inverse() * event.position
-		var center: Vector2 = joystick.size * 0.5
-		var radius: float = float(joystick.get("stick_radius"))
-		var value: Vector2 = (local_position - center).limit_length(radius) / radius
-		joystick.call("set_virtual_value", value)
-		player.set_move_input(value)
-		get_viewport().set_input_as_handled()
+	# Joystick touches are handled by joystick.gd through its value_changed/released signals.
+	# Keeping them out of _input prevents duplicate handling and lets Control._gui_input own the pointer.
 
 
 func _unhandled_input(event: InputEvent) -> void:

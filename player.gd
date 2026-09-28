@@ -39,17 +39,77 @@ func _ready() -> void:
 	_build_visual()
 
 func _build_visual() -> void:
-	visual_root = BAKED_CHARACTER_SCRIPT.create("res://assets/player_human.meshbin", Color("#b8e9ff"), 1.18)
+	# Use simple Android-safe primitives for a guaranteed visible humanoid silhouette.
+	visual_root = Node3D.new()
 	visual_root.name = "CharacterModel"
 	add_child(visual_root)
+	var skin := _character_mat(Color("#c8ecff"), Color("#78d7ff"))
+	var suit := _character_mat(Color("#263b4a"), Color("#4ab7e8"))
+	var dark := _character_mat(Color("#101820"), Color("#3c6f85"))
+
+	var torso_mesh := CapsuleMesh.new()
+	torso_mesh.radius = 0.30
+	torso_mesh.height = 1.05
+	_add_part("CharacterMesh", torso_mesh, Vector3(0.0, 1.08, 0.0), Vector3.ONE, suit)
+
+	var head_mesh := SphereMesh.new()
+	head_mesh.radius = 0.25
+	head_mesh.height = 0.50
+	_add_part("Head", head_mesh, Vector3(0.0, 1.86, 0.0), Vector3.ONE, skin)
+
+	var visor_mesh := SphereMesh.new()
+	visor_mesh.radius = 0.19
+	visor_mesh.height = 0.26
+	_add_part("Visor", visor_mesh, Vector3(0.0, 1.88, -0.16), Vector3(1.0, 0.55, 0.22), dark)
+
+	var arm_mesh := CapsuleMesh.new()
+	arm_mesh.radius = 0.10
+	arm_mesh.height = 0.72
+	_add_part("LeftArm", arm_mesh, Vector3(-0.40, 1.10, 0.0), Vector3.ONE, skin)
+	_add_part("RightArm", arm_mesh, Vector3(0.40, 1.10, 0.0), Vector3.ONE, skin)
+
+	var leg_mesh := CapsuleMesh.new()
+	leg_mesh.radius = 0.12
+	leg_mesh.height = 0.84
+	_add_part("LeftLeg", leg_mesh, Vector3(-0.17, 0.46, 0.0), Vector3.ONE, dark)
+	_add_part("RightLeg", leg_mesh, Vector3(0.17, 0.46, 0.0), Vector3.ONE, dark)
+
+	var chest := MeshInstance3D.new()
+	chest.name = "ChestLight"
+	var chest_box := BoxMesh.new()
+	chest_box.size = Vector3(0.20, 0.20, 0.06)
+	chest_box.material = _character_mat(Color("#bdf3ff"), Color("#8be5ff"))
+	chest.mesh = chest_box
+	chest.position = Vector3(0.0, 1.18, -0.29)
+	visual_root.add_child(chest)
 
 	var collider: CollisionShape3D = CollisionShape3D.new()
 	var shape: CapsuleShape3D = CapsuleShape3D.new()
 	shape.radius = 0.42
-	shape.height = 1.78
+	shape.height = 1.95
 	collider.shape = shape
-	collider.position.y = 0.89
+	collider.position.y = 0.98
 	add_child(collider)
+
+func _add_part(part_name: String, mesh: Mesh, position_value: Vector3, scale_value: Vector3, material: StandardMaterial3D) -> void:
+	var part := MeshInstance3D.new()
+	part.name = part_name
+	part.mesh = mesh
+	part.position = position_value
+	part.scale = scale_value
+	part.material_override = material
+	part.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	visual_root.add_child(part)
+
+func _character_mat(base_color: Color, glow_color: Color) -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	material.albedo_color = base_color
+	material.emission_enabled = true
+	material.emission = glow_color
+	material.emission_energy_multiplier = 0.30
+	return material
 
 
 func _physics_process(delta: float) -> void:

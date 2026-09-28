@@ -42,7 +42,7 @@ func _gui_input(event: InputEvent) -> void:
 		var touch: InputEventScreenTouch = event
 		if touch.pressed and active_pointer == -1:
 			active_pointer = touch.index
-			_set_value(touch.position)
+			_set_value(get_global_transform().affine_inverse() * touch.position)
 			accept_event()
 		elif not touch.pressed and touch.index == active_pointer:
 			_reset()
@@ -50,14 +50,14 @@ func _gui_input(event: InputEvent) -> void:
 	elif event is InputEventScreenDrag:
 		var drag: InputEventScreenDrag = event
 		if drag.index == active_pointer:
-			_set_value(drag.position)
+			_set_value(get_global_transform().affine_inverse() * drag.position)
 			accept_event()
 	elif event is InputEventMouseButton:
 		var mouse: InputEventMouseButton = event
 		if mouse.button_index == MOUSE_BUTTON_LEFT:
 			if mouse.pressed and not mouse_active:
 				mouse_active = true
-				_set_value(mouse.position)
+				_set_value(get_global_transform().affine_inverse() * mouse.position)
 				accept_event()
 			elif not mouse.pressed and mouse_active:
 				_reset()
