@@ -6,6 +6,7 @@ const PROJECTILE_SCRIPT = preload("res://projectile.gd")
 const SAVE_SCRIPT = preload("res://save_system.gd")
 const AUDIO_SCRIPT = preload("res://audio_manager.gd")
 const JOYSTICK_SCRIPT = preload("res://joystick.gd")
+const ENVIRONMENT_SCENE = preload("res://assets/orbital_field_station.glb")
 
 var player: CharacterBody3D
 var camera: Camera3D
@@ -144,8 +145,9 @@ func _build_environment() -> void:
 	sun.name = "KeyLight"
 	sun.rotation_degrees = Vector3(-53.0, -31.0, 0.0)
 	sun.light_color = Color("#e3ddd2")
-	sun.light_energy = 1.28
-	sun.shadow_enabled = false
+	sun.light_energy = 1.22
+	sun.shadow_enabled = true
+	sun.directional_shadow_max_distance = 48.0
 	add_child(sun)
 	dynamic_lights.append(sun)
 	if DisplayServer.is_touchscreen_available():
@@ -347,6 +349,25 @@ func _build_landmarks(map_id: int = 0) -> void:
 			beam.position = Vector3((j - 1.5) * 2.2, 4.5, 0)
 			tower.add_child(beam)
 			lod_nodes.append(beam)
+
+	var hero_positions := [Vector3(-22.0, 0.0, -25.0), Vector3(22.0, 0.0, -25.0)]
+	if map_id == 1:
+		hero_positions = [Vector3(20.0, 0.0, -21.0)]
+	elif map_id == 2:
+		hero_positions = [Vector3(-21.0, 0.0, -24.0), Vector3(21.0, 0.0, -24.0)]
+	for i in range(hero_positions.size()):
+		_add_hero_environment(hero_positions[i], (0.12 if i % 2 == 0 else -0.12) + float(map_id) * 0.08, 1.18)
+
+func _add_hero_environment(position_value: Vector3, rotation_y: float, scale_value: float) -> void:
+	var scene := ENVIRONMENT_SCENE.instantiate()
+	scene.name = "HeroEnvironment"
+	scene.position = position_value
+	scene.rotation.y = rotation_y
+	scene.scale = Vector3.ONE * scale_value
+	arena_root.add_child(scene)
+	for node in scene.find_children("*", "MeshInstance3D", true, false):
+		if node is MeshInstance3D:
+			lod_nodes.append(node)
 
 func _build_stage_gate() -> void:
 	var gate := MeshInstance3D.new()
@@ -1016,7 +1037,7 @@ func _apply_quality() -> void:
 	# Mobile profile: keep realtime shadow/light work disabled.
 	for light in dynamic_lights:
 		if is_instance_valid(light):
-			light.shadow_enabled = false
+			light.shadow_enabled = quality_level >= 2
 	for fx in particle_nodes:
 		if is_instance_valid(fx):
 			fx.amount = max(4, int(float(fx.amount) * 0.8))
@@ -1168,10 +1189,10 @@ func _configure_touch_button(button: Button, fill_color: Color, border_color: Co
 
 func _mat(color: Color, metallic: float, roughness: float, emission: Color, energy: float) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
-	material.albedo_color = color.lerp(Color("#6b665d"), 0.44)
-	material.metallic = min(metallic, 0.82)
-	material.roughness = max(roughness, 0.42)
+	material.albedo_color = color
+	material.metallic = clamp(metallic, 0.0, 1.0)
+	material.roughness = clamp(roughness, 0.08, 1.0)
 	material.emission_enabled = energy > 0.10
-	material.emission = emission.lerp(Color("#9b7a50"), 0.48)
-	material.emission_energy_multiplier = min(energy * 0.34, 0.58)
+	material.emission = emission
+	material.emission_energy_multiplier = min(energy, 2.2)
 	return material

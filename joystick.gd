@@ -8,6 +8,7 @@ signal released
 
 var active_pointer: int = -1
 var mouse_active: bool = false
+var active_origin: Vector2 = Vector2.ZERO
 var stick_value: Vector2 = Vector2.ZERO
 
 func _ready() -> void:
@@ -37,42 +38,54 @@ func _draw() -> void:
 	draw_circle(knob_center, knob_radius, Color(0.69, 0.58, 0.40, 0.99))
 	draw_circle(knob_center - Vector2(9, 9), knob_radius * 0.27, Color(0.96, 0.94, 0.88, 0.94))
 
+func _pointer_to_local(viewport_position: Vector2) -> Vector2:
+	var rect := get_global_rect()
+	var scale_x := size.x / max(rect.size.x, 1.0)
+	var scale_y := size.y / max(rect.size.y, 1.0)
+	return Vector2(
+		(viewport_position.x - rect.position.x) * scale_x,
+		(viewport_position.y - rect.position.y) * scale_y
+	)
+
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
-		var touch: InputEventScreenTouch = event
+		var touch := event as InputEventScreenTouch
 		if touch.pressed and active_pointer == -1:
 			active_pointer = touch.index
-			_set_value(get_global_transform().affine_inverse() * touch.position)
+			active_origin = _pointer_to_local(touch.position)
+			stick_value = Vector2.ZERO
+			queue_redraw()
+			value_changed.emit(Vector2.ZERO)
 			accept_event()
 		elif not touch.pressed and touch.index == active_pointer:
 			_reset()
 			accept_event()
 	elif event is InputEventScreenDrag:
-		var drag: InputEventScreenDrag = event
+		var drag := event as InputEventScreenDrag
 		if drag.index == active_pointer:
-			_set_value(get_global_transform().affine_inverse() * drag.position)
+			_set_value_from_offset(_pointer_to_local(drag.position) - active_origin)
 			accept_event()
 	elif event is InputEventMouseButton:
-		var mouse: InputEventMouseButton = event
+		var mouse := event as InputEventMouseButton
 		if mouse.button_index == MOUSE_BUTTON_LEFT:
 			if mouse.pressed and not mouse_active:
 				mouse_active = true
-				_set_value(get_global_transform().affine_inverse() * mouse.position)
+				active_origin = _pointer_to_local(mouse.position)
+				stick_value = Vector2.ZERO
+				queue_redraw()
+				value_changed.emit(Vector2.ZERO)
 				accept_event()
 			elif not mouse.pressed and mouse_active:
 				_reset()
 				accept_event()
 	elif event is InputEventMouseMotion and mouse_active:
-		var motion: InputEventMouseMotion = event
-		_set_value(motion.position)
+		var motion := event as InputEventMouseMotion
+		_set_value_from_offset(_pointer_to_local(motion.position) - active_origin)
 		accept_event()
 
-func _set_value(local_position: Vector2) -> void:
-	var center: Vector2 = size * 0.5
-	var offset: Vector2 = local_position - center
-	if offset.length() > stick_radius:
-		offset = offset.normalized() * stick_radius
-	stick_value = offset / stick_radius
+func _set_value_from_offset(offset: Vector2) -> void:
+	var clamped := offset.limit_length(stick_radius)
+	stick_value = clamped / stick_radius
 	if stick_value.length() < 0.10:
 		stick_value = Vector2.ZERO
 	queue_redraw()
@@ -81,6 +94,7 @@ func _set_value(local_position: Vector2) -> void:
 func _reset() -> void:
 	active_pointer = -1
 	mouse_active = false
+	active_origin = Vector2.ZERO
 	stick_value = Vector2.ZERO
 	queue_redraw()
 	value_changed.emit(Vector2.ZERO)
