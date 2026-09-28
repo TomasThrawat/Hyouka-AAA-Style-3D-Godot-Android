@@ -1,7 +1,5 @@
 extends CharacterBody3D
 
-const BAKED_CHARACTER_SCRIPT = preload("res://baked_character.gd")
-
 signal boost_requested
 signal fire_requested(origin: Vector3, direction: Vector3, damage: float)
 signal health_changed(value: float)
@@ -39,16 +37,68 @@ func _ready() -> void:
 	_build_visual()
 
 func _build_visual() -> void:
-	visual_root = BAKED_CHARACTER_SCRIPT.create("res://assets/player_human.meshbin", Color("#aaa49a"), 1.04)
-	visual_root.name = "CharacterModel"
-	add_child(visual_root)
-	var collider: CollisionShape3D = CollisionShape3D.new()
-	var shape: CapsuleShape3D = CapsuleShape3D.new()
+	var packed: PackedScene = null
+	if OS.get_name() == "Android":
+		packed = load("res://assets/player_human.glb") as PackedScene
+	if packed != null:
+		var model := packed.instantiate() as Node3D
+		model.name = "CharacterModel"
+		model.scale = Vector3.ONE * 1.04
+		add_child(model)
+		visual_root = model
+	else:
+		_build_fallback_humanoid()
+
+	var collider := CollisionShape3D.new()
+	var shape := CapsuleShape3D.new()
 	shape.radius = 0.42
 	shape.height = 1.78
 	collider.shape = shape
 	collider.position.y = 0.89
 	add_child(collider)
+
+
+func _build_fallback_humanoid() -> void:
+	visual_root = Node3D.new()
+	visual_root.name = "CharacterModelFallback"
+	var torso_mesh := CapsuleMesh.new()
+	torso_mesh.radius = 0.34
+	torso_mesh.height = 0.92
+	torso_mesh.material = _mat(Color("#3b3934"), 0.32, 0.54, Color("#8b724f"), 0.06)
+	var torso := MeshInstance3D.new()
+	torso.mesh = torso_mesh
+	torso.position.y = 1.02
+	visual_root.add_child(torso)
+
+	var head_mesh := SphereMesh.new()
+	head_mesh.radius = 0.23
+	head_mesh.height = 0.46
+	head_mesh.material = _mat(Color("#4a463f"), 0.28, 0.50, Color("#8b724f"), 0.05)
+	var head := MeshInstance3D.new()
+	head.mesh = head_mesh
+	head.position.y = 1.72
+	visual_root.add_child(head)
+
+	for x in [-0.42, 0.42]:
+		var limb_mesh := CapsuleMesh.new()
+		limb_mesh.radius = 0.11
+		limb_mesh.height = 0.78
+		limb_mesh.material = _mat(Color("#2d2b27"), 0.30, 0.58, Color("#7d674b"), 0.04)
+		var limb := MeshInstance3D.new()
+		limb.mesh = limb_mesh
+		limb.position = Vector3(x, 0.96, 0.0)
+		limb.rotation_degrees.z = -x * 10.0
+		visual_root.add_child(limb)
+
+	var backpack_mesh := CapsuleMesh.new()
+	backpack_mesh.radius = 0.18
+	backpack_mesh.height = 0.62
+	backpack_mesh.material = _mat(Color("#252421"), 0.20, 0.64, Color("#6f5c45"), 0.03)
+	var backpack := MeshInstance3D.new()
+	backpack.mesh = backpack_mesh
+	backpack.position = Vector3(0, 1.03, 0.32)
+	visual_root.add_child(backpack)
+	add_child(visual_root)
 
 
 func _physics_process(delta: float) -> void:

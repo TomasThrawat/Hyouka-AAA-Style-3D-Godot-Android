@@ -64,6 +64,7 @@ var joystick: Control
 var touch_layer: CanvasLayer
 var touch_root: Control
 var touch_controls: Array[Control] = []
+var joystick_touch_pointer := -1
 var camera_touch_pointer := -1
 var camera_touch_last := Vector2.ZERO
 var camera_yaw := 0.0
@@ -446,8 +447,6 @@ func _create_touch_controls() -> void:
 	joystick.mouse_filter = Control.MOUSE_FILTER_STOP
 	touch_root.add_child(joystick)
 	touch_controls.append(joystick)
-	joystick.value_changed.connect(_on_joystick_changed)
-	joystick.released.connect(_on_joystick_released)
 
 	fire_button = _button("FIRE", Vector2(168, 104), 23)
 	fire_button.set_anchors_preset(Control.PRESET_TOP_LEFT)
@@ -919,6 +918,35 @@ func _update_camera(delta: float) -> void:
 	camera.global_position = camera.global_position.lerp(desired, min(1.0, delta * 7.0))
 	var target_offset := orbit_basis * Vector3(0.0, 0.7, -1.5)
 	camera.look_at(player.global_position + Vector3.UP * 1.0 + target_offset, Vector3.UP)
+
+
+func _input(event: InputEvent) -> void:
+	if not running or game_over or get_tree().paused or not joystick:
+		return
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			if joystick_touch_pointer == -1 and joystick.get_global_rect().has_point(event.position):
+				joystick_touch_pointer = event.index
+				var local_position: Vector2 = joystick.get_global_transform().affine_inverse() * event.position
+				var center: Vector2 = joystick.size * 0.5
+				var radius: float = float(joystick.get("stick_radius"))
+				var value: Vector2 = (local_position - center).limit_length(radius) / radius
+				joystick.call("set_virtual_value", value)
+				player.set_move_input(value)
+				get_viewport().set_input_as_handled()
+		elif event.index == joystick_touch_pointer:
+			joystick_touch_pointer = -1
+			joystick.call("set_virtual_value", Vector2.ZERO)
+			player.clear_move_input()
+			get_viewport().set_input_as_handled()
+	elif event is InputEventScreenDrag and event.index == joystick_touch_pointer:
+		var local_position: Vector2 = joystick.get_global_transform().affine_inverse() * event.position
+		var center: Vector2 = joystick.size * 0.5
+		var radius: float = float(joystick.get("stick_radius"))
+		var value: Vector2 = (local_position - center).limit_length(radius) / radius
+		joystick.call("set_virtual_value", value)
+		player.set_move_input(value)
+		get_viewport().set_input_as_handled()
 
 
 func _unhandled_input(event: InputEvent) -> void:
