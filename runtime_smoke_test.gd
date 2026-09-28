@@ -95,10 +95,15 @@ func _run() -> void:
 	_check(game.final_boss_active, "boss wave activates")
 	_check(game.boss_bar.visible, "boss health bar appears")
 
+	var exit_code := 0
 	if failures.is_empty():
 		print("SELF TEST PASS")
-		quit(0)
 	else:
 		for failure in failures:
 			push_error("SELF TEST FAILURE: " + failure)
-		quit(1)
+		exit_code = 1
+
+	game.queue_free()
+	await process_frame
+	await process_frame
+	quit(exit_code)
