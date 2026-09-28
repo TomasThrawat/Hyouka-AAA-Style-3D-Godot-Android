@@ -265,10 +265,10 @@ func reset_for_run() -> void:
 
 func _mat(color: Color, metallic: float, roughness: float, emission: Color, energy_value: float) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
-	material.albedo_color = color
-	material.metallic = metallic
-	material.roughness = roughness
-	material.emission_enabled = true
-	material.emission = emission
-	material.emission_energy_multiplier = energy_value
+	material.albedo_color = color.lerp(Color("#6b665d"), 0.50)
+	material.metallic = min(metallic, 0.82)
+	material.roughness = max(roughness, 0.44)
+	material.emission_enabled = energy_value > 0.10
+	material.emission = emission.lerp(Color("#9b7a50"), 0.52)
+	material.emission_energy_multiplier = min(energy_value * 0.30, 0.52)
 	return material
