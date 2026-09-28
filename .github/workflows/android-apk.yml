@@ -59,10 +59,10 @@ jobs:
           GODOT_VERSION: "4.7.2"
         run: |
           set -Eeuo pipefail
-          mkdir -p "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable.mono"
           cd "$RUNNER_TEMP/godot"
           curl -fsSLO "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_mono_export_templates.tpz"
-          unzip -q -o "Godot_v${GODOT_VERSION}-stable_mono_export_templates.tpz" -d "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          unzip -q -o "Godot_v${GODOT_VERSION}-stable_mono_export_templates.tpz" -d "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable.mono"
           test -f "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/templates/android_debug.apk"
           test -f "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/templates/android_release.apk"
 
