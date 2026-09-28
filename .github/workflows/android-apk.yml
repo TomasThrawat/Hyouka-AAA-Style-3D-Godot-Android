@@ -89,6 +89,11 @@ jobs:
           "$GODOT_BIN" --headless --path . --quit-after 120 2>&1 | tee "$RUNNER_TEMP/godot-validate.log"
           ! grep -Eiq "SCRIPT ERROR|PARSE ERROR|ERROR|FAILED|EXCEPTION|FATAL|CRITICAL|WARNING|DEPRECATED" "$RUNNER_TEMP/godot-import.log" "$RUNNER_TEMP/godot-validate.log"
 
+      - name: Run Godot gameplay self-test
+        run: |
+          set -Eeuo pipefail
+          "$GODOT_BIN" --headless --path . --script runtime_smoke_test.gd 2>&1 | tee "$RUNNER_TEMP/godot-self-test.log"
+
       - name: Export debug APK
         env:
           GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /home/runner/.android/debug.keystore
@@ -109,10 +114,81 @@ jobs:
           cat "$RUNNER_TEMP/godot-import.log"
           cat "$RUNNER_TEMP/godot-validate.log"
           cat "$RUNNER_TEMP/godot-export.log"
-          if grep -Eiq "ERROR|FAILED|EXCEPTION|FATAL|CRITICAL|WARNING|DEPRECATED" "$RUNNER_TEMP/godot-import.log" "$RUNNER_TEMP/godot-validate.log" "$RUNNER_TEMP/godot-export.log"; then
+          cat "$RUNNER_TEMP/godot-self-test.log"
+          if grep -Eiq "ERROR|FAILED|EXCEPTION|FATAL|CRITICAL|WARNING|DEPRECATED" "$RUNNER_TEMP/godot-import.log" "$RUNNER_TEMP/godot-validate.log" "$RUNNER_TEMP/godot-export.log" "$RUNNER_TEMP/godot-self-test.log"; then
             echo "Unexpected Godot log marker found."
             exit 1
           fi
+
+      - name: Android emulator gameplay smoke test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: Pixel_2
+          cores: 2
+          ram-size: 2048M
+          disk-size: 6144M
+          force-avd-creation: true
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          disable-animations: true
+          script: |
+            set -Eeuo pipefail
+            mkdir -p ui-test
+            adb install -r build/HyoukaNeonFrontier-debug.apk
+            adb shell am force-stop com.tomasthrawat.hyoukaneonfrontier
+            adb shell monkey -p com.tomasthrawat.hyoukaneonfrontier 1
+            sleep 4
+            SIZE="$(adb shell wm size | awk -F': ' 'END {print $2}' | tr -d '')"
+            WIDTH="$(echo "$SIZE" | awk -Fx '{print $1}')"
+            HEIGHT="$(echo "$SIZE" | awk -Fx '{print $2}')"
+            test -n "$WIDTH"
+            test -n "$HEIGHT"
+            CENTER_X=$((WIDTH / 2))
+            START_Y=$((HEIGHT * 7 / 10))
+            JOY_X=140
+            JOY_Y=$((HEIGHT - 120))
+            RIGHT_X=$((WIDTH - 120))
+            RIGHT_Y=$((HEIGHT - 175))
+            RIGHT_LOW_Y=$((HEIGHT - 82))
+            MID_RIGHT_X=$((WIDTH - 285))
+            PAUSE_X=$((WIDTH - 48))
+            PAUSE_Y=78
+
+            adb exec-out screencap -p > ui-test/menu.png
+            adb shell input tap "$CENTER_X" "$START_Y"
+            sleep 2
+            adb exec-out screencap -p > ui-test/game-start.png
+
+            adb shell input swipe "$JOY_X" "$JOY_Y" "$JOY_X" "$((HEIGHT - 175))" 350
+            adb shell input tap "$RIGHT_X" "$RIGHT_Y"
+            adb shell input tap "$RIGHT_X" "$RIGHT_LOW_Y"
+            adb shell input tap "$MID_RIGHT_X" "$RIGHT_Y"
+            adb shell input tap "$MID_RIGHT_X" "$RIGHT_LOW_Y"
+            adb shell input tap "$PAUSE_X" "$PAUSE_Y"
+            sleep 1
+            adb exec-out screencap -p > ui-test/paused.png
+            adb shell input tap "$PAUSE_X" "$PAUSE_Y"
+            sleep 2
+            adb shell input tap "$RIGHT_X" "$RIGHT_Y"
+            sleep 1
+            adb exec-out screencap -p > ui-test/gameplay.png
+
+            adb shell pidof com.tomasthrawat.hyoukaneonfrontier
+            adb logcat -d > ui-test/logcat.txt
+            if grep -Eiq "FATAL EXCEPTION|AndroidRuntime.*FATAL|SIGSEGV|SIGABRT" ui-test/logcat.txt; then
+              echo "Android runtime failure detected."
+              exit 1
+            fi
+
+      - name: Upload UI test evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: HyoukaNeonFrontier-UI-Test
+          path: ui-test/
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Verify repository is APK-only
         run: |

@@ -6,6 +6,8 @@ const BAKED_CHARACTER_SCRIPT = preload("res://baked_character.gd")
 
 signal boost_requested
 signal fire_requested(origin: Vector3, direction: Vector3, damage: float)
+signal tactical_requested(origin: Vector3, direction: Vector3)
+signal shield_requested
 signal health_changed(value: float)
 signal energy_changed(value: float)
 signal died
@@ -24,6 +26,9 @@ var move_stick := Vector2.ZERO
 var fire_input := false
 var boost_time := 0.0
 var boost_cooldown := 0.0
+var tactical_cooldown := 0.0
+var shield_cooldown := 0.0
+var shield_time := 0.0
 var fire_cooldown := 0.0
 var anim_time := 0.0
 var invulnerability := 0.0
@@ -74,6 +79,9 @@ func _physics_process(delta: float) -> void:
 	anim_time += delta
 	boost_cooldown = max(0.0, boost_cooldown - delta)
 	boost_time = max(0.0, boost_time - delta)
+	tactical_cooldown = max(0.0, tactical_cooldown - delta)
+	shield_cooldown = max(0.0, shield_cooldown - delta)
+	shield_time = max(0.0, shield_time - delta)
 	fire_cooldown = max(0.0, fire_cooldown - delta)
 	invulnerability = max(0.0, invulnerability - delta)
 
@@ -127,6 +135,23 @@ func boost() -> void:
 	energy_changed.emit(energy)
 	boost_requested.emit()
 
+func tactical() -> void:
+	if tactical_cooldown > 0.0 or energy < 45.0 or get_tree().paused:
+		return
+	tactical_cooldown = 5.0
+	energy -= 45.0
+	energy_changed.emit(energy)
+	tactical_requested.emit(global_position + Vector3.UP * 0.75, -global_transform.basis.z)
+
+func shield() -> void:
+	if shield_cooldown > 0.0 or energy < 35.0 or get_tree().paused:
+		return
+	shield_cooldown = 8.0
+	shield_time = 3.0
+	energy -= 35.0
+	energy_changed.emit(energy)
+	shield_requested.emit()
+
 func set_move_input(value: Vector2) -> void:
 	move_stick = value.limit_length(1.0)
 
@@ -139,8 +164,13 @@ func set_fire_input(value: bool) -> void:
 func take_damage(amount: float) -> void:
 	if health <= 0.0 or invulnerability > 0.0:
 		return
-	invulnerability = 0.28
-	health = max(0.0, health - amount)
+	var final_damage := amount
+	if shield_time > 0.0:
+		final_damage *= 0.30
+		invulnerability = 0.16
+	else:
+		invulnerability = 0.28
+	health = max(0.0, health - final_damage)
 	health_changed.emit(health)
 	_hit_feedback()
 	if health <= 0.0:
@@ -185,6 +215,9 @@ func reset_for_run() -> void:
 	fire_cooldown = 0.0
 	boost_cooldown = 0.0
 	boost_time = 0.0
+	tactical_cooldown = 0.0
+	shield_cooldown = 0.0
+	shield_time = 0.0
 	invulnerability = 0.0
 	fire_input = false
 	velocity = Vector3.ZERO

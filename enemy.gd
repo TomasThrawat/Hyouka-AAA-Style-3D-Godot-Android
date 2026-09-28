@@ -6,6 +6,7 @@ const BAKED_CHARACTER_SCRIPT = preload("res://baked_character.gd")
 
 signal defeated(enemy: Node3D, boss: bool)
 signal attack_requested(origin: Vector3, direction: Vector3, damage: float)
+signal health_changed(current: float, maximum: float)
 
 var target: Node3D
 var enemy_type := "drone"
@@ -20,6 +21,7 @@ var ai_timer := 0.0
 var cached_direction := Vector3.FORWARD
 var cached_distance := 999.0
 var boss := false
+var enraged := false
 var visual_root: Node3D
 
 func setup(target_node: Node3D, difficulty: float, kind: String, is_boss: bool) -> void:
@@ -51,6 +53,8 @@ func setup(target_node: Node3D, difficulty: float, kind: String, is_boss: bool) 
 	else:
 		scale = Vector3.ONE * (0.9 + difficulty * 0.035)
 	health = max_health
+	enraged = false
+	health_changed.emit(health, max_health)
 	collision_layer = 0
 	collision_mask = 0
 	_build_visual()
@@ -87,6 +91,11 @@ func _physics_process(delta: float) -> void:
 	if get_tree().paused or target == null:
 		return
 	phase += delta
+	if boss and not enraged and health <= max_health * 0.50:
+		enraged = true
+		speed *= 1.18
+		ranged_damage *= 1.25
+		attack_cooldown = 0.4
 	attack_cooldown = max(0.0, attack_cooldown - delta)
 	ai_timer -= delta
 	if ai_timer <= 0.0:
@@ -138,10 +147,15 @@ func _juggernaut_ai(direction: Vector3, distance: float) -> void:
 		if attack_cooldown <= 0.0 and target.has_method("take_damage"):
 			target.take_damage(touch_damage)
 			attack_cooldown = 1.15
-	if attack_cooldown <= 0.0 and distance < 13.0 and boss:
-		var attack_dir := (target.global_position + Vector3.UP * 0.7 - (global_position + Vector3.UP * 0.6)).normalized()
-		attack_requested.emit(global_position + Vector3.UP * 1.2, attack_dir, ranged_damage + 5.0)
-		attack_cooldown = 2.6
+	if attack_cooldown <= 0.0 and distance < 22.0 and boss:
+		var attack_origin := global_position + Vector3.UP * 1.2
+		var spread_values := [-0.18, 0.0, 0.18]
+		if enraged:
+			spread_values = [-0.30, -0.15, 0.0, 0.15, 0.30]
+		for spread in spread_values:
+			var attack_dir := direction.rotated(Vector3.UP, spread)
+			attack_requested.emit(attack_origin, attack_dir, ranged_damage + (7.0 if enraged else 5.0))
+		attack_cooldown = 1.8 if enraged else 2.6
 
 func _update_animation(delta: float, direction: Vector3) -> void:
 	if visual_root == null:
@@ -152,7 +166,8 @@ func _update_animation(delta: float, direction: Vector3) -> void:
 	rotation.y = lerp_angle(rotation.y, atan2(-direction.x, -direction.z), min(1.0, delta * 6.0))
 
 func take_damage(amount: float) -> void:
-	health -= amount
+	health = max(0.0, health - amount)
+	health_changed.emit(health, max_health)
 	_hit_feedback()
 	if health <= 0.0:
 		defeated.emit(self, boss)

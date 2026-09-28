@@ -66,11 +66,16 @@ var ammo_label: Label
 var objective_label: Label
 var message_label: Label
 var profile_label: Label
+var combo_label: Label
+var boss_bar: ProgressBar
+var screen_flash: ColorRect
 var menu_panel: PanelContainer
 var pause_panel: PanelContainer
 var pause_button: Button
 var fire_button: Button
 var boost_button: Button
+var tactical_button: Button
+var shield_button: Button
 var start_button: Button
 var joystick: Control
 var touch_layer: CanvasLayer
@@ -81,6 +86,10 @@ var camera_touch_pointer := -1
 var camera_touch_last := Vector2.ZERO
 var camera_yaw := 0.0
 var camera_pitch := -0.22
+var camera_shake := 0.0
+var combo_count := 0
+var combo_timer := 0.0
+var atmosphere_nodes: Array[GPUParticles3D] = []
 const CAMERA_TOUCH_SENSITIVITY := 0.0085
 
 func _ready() -> void:
@@ -109,6 +118,10 @@ func _notification(what: int) -> void:
 func _process(delta: float) -> void:
 	elapsed += delta
 	hud_timer -= delta
+	camera_shake = max(0.0, camera_shake - delta)
+	combo_timer = max(0.0, combo_timer - delta)
+	if combo_timer <= 0.0:
+		combo_count = 0
 	_profile_performance(delta)
 	_update_lod(delta)
 	if running and not game_over and not get_tree().paused:
@@ -138,6 +151,10 @@ func _build_environment() -> void:
 	environment.ambient_light_energy = 0.68
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	environment.tonemap_exposure = 0.92
+	environment.fog_enabled = true
+	environment.fog_light_color = Color("#6f6a61")
+	environment.fog_light_energy = 0.72
+	environment.fog_density = 0.0065
 	world_environment.environment = environment
 	add_child(world_environment)
 
@@ -161,6 +178,33 @@ func _build_arena() -> void:
 	_build_sector_geometry(selected_map)
 	_build_landmarks(selected_map)
 	_build_stage_gate()
+	_build_atmosphere()
+
+
+func _build_atmosphere() -> void:
+	var fx := GPUParticles3D.new()
+	fx.name = "Atmosphere"
+	fx.amount = 110
+	fx.lifetime = 8.0
+	fx.randomness = 0.55
+	fx.visibility_aabb = AABB(Vector3(-40.0, 0.0, -40.0), Vector3(80.0, 18.0, 80.0))
+	var process_material := ParticleProcessMaterial.new()
+	process_material.direction = Vector3(0.0, -1.0, 0.0)
+	process_material.spread = 18.0
+	process_material.initial_velocity_min = 0.15
+	process_material.initial_velocity_max = 0.55
+	process_material.gravity = Vector3(0.0, -0.08, 0.0)
+	process_material.scale_min = 0.035
+	process_material.scale_max = 0.075
+	process_material.color = Color("#cbbda8")
+	fx.process_material = process_material
+	var particle_mesh := SphereMesh.new()
+	particle_mesh.radius = 0.055
+	particle_mesh.height = 0.11
+	particle_mesh.material = _mat(Color("#cbbda8"), 0.0, 0.85, Color("#cbbda8"), 0.28)
+	fx.draw_pass_1 = particle_mesh
+	arena_root.add_child(fx)
+	atmosphere_nodes.append(fx)
 
 
 func _rebuild_selected_map() -> void:
@@ -388,6 +432,8 @@ func _create_player() -> void:
 	player.died.connect(_on_player_died)
 	player.fire_requested.connect(_on_player_fire)
 	player.boost_requested.connect(_on_boost)
+	player.tactical_requested.connect(_on_player_tactical)
+	player.shield_requested.connect(_on_player_shield)
 	player.energy_changed.connect(_on_player_energy_changed)
 
 func _create_camera() -> void:
@@ -460,7 +506,33 @@ func _build_ui() -> void:
 	message_label.size = Vector2(640, 70)
 	layer.add_child(message_label)
 
+	combo_label = _label("COMBO x0", 18)
+	combo_label.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	combo_label.position = Vector2(20, 142)
+	combo_label.size = Vector2(220, 32)
+	layer.add_child(combo_label)
+
+	boss_bar = ProgressBar.new()
+	boss_bar.name = "BossHealth"
+	boss_bar.max_value = 100.0
+	boss_bar.value = 0.0
+	boss_bar.show_percentage = false
+	boss_bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	boss_bar.position = Vector2(280, 145)
+	boss_bar.size = Vector2(720, 24)
+	boss_bar.hide()
+	layer.add_child(boss_bar)
+
+	screen_flash = ColorRect.new()
+	screen_flash.name = "ScreenFlash"
+	screen_flash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	screen_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	screen_flash.z_index = 300
+	screen_flash.modulate = Color(1.0, 1.0, 1.0, 0.0)
+	layer.add_child(screen_flash)
+
 	pause_button = _button("PAUSE", Vector2(70, 54), 22)
+	pause_button.name = "PauseButton"
 	pause_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	pause_button.position = Vector2(-84, 54)
 	pause_button.z_index = 120
@@ -560,6 +632,7 @@ func _create_touch_controls() -> void:
 	touch_controls.append(joystick)
 
 	fire_button = _button("FIRE", Vector2(168, 104), 23)
+	fire_button.name = "FireButton"
 	fire_button.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	fire_button.size = Vector2(168, 104)
 	_configure_touch_button(fire_button, Color("#2c2926"), Color("#d1a66f"))
@@ -567,6 +640,7 @@ func _create_touch_controls() -> void:
 	touch_controls.append(fire_button)
 
 	boost_button = _button("BOOST", Vector2(168, 64), 18)
+	boost_button.name = "BoostButton"
 	boost_button.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	boost_button.size = Vector2(168, 64)
 	_configure_touch_button(boost_button, Color("#242423"), Color("#8d8170"))
@@ -574,6 +648,20 @@ func _create_touch_controls() -> void:
 	touch_controls.append(boost_button)
 
 	boost_button.pressed.connect(_boost_pressed)
+	tactical_button = _button("TACTICAL", Vector2(156, 64), 17)
+	tactical_button.name = "TacticalButton"
+	tactical_button.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_configure_touch_button(tactical_button, Color("#272524"), Color("#8e6f52"))
+	touch_root.add_child(tactical_button)
+	touch_controls.append(tactical_button)
+	shield_button = _button("SHIELD", Vector2(156, 64), 17)
+	shield_button.name = "ShieldButton"
+	shield_button.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_configure_touch_button(shield_button, Color("#232629"), Color("#707d87"))
+	touch_root.add_child(shield_button)
+	touch_controls.append(shield_button)
+	tactical_button.pressed.connect(func(): player.tactical())
+	shield_button.pressed.connect(func(): player.shield())
 	fire_button.button_down.connect(func(): player.set_fire_input(true))
 	fire_button.button_up.connect(func(): player.set_fire_input(false))
 	get_viewport().size_changed.connect(_layout_touch_controls)
@@ -588,6 +676,8 @@ func _layout_touch_controls() -> void:
 	joystick.position = Vector2(32.0, max(24.0, viewport_size.y - 248.0))
 	fire_button.position = Vector2(max(24.0, viewport_size.x - 208.0), max(24.0, viewport_size.y - 228.0))
 	boost_button.position = Vector2(max(24.0, viewport_size.x - 208.0), max(24.0, viewport_size.y - 112.0))
+	tactical_button.position = Vector2(max(24.0, viewport_size.x - 380.0), max(24.0, viewport_size.y - 228.0))
+	shield_button.position = Vector2(max(24.0, viewport_size.x - 380.0), max(24.0, viewport_size.y - 150.0))
 
 
 func _on_joystick_changed(value: Vector2) -> void:
@@ -631,6 +721,9 @@ func _begin_run(continue_run: bool) -> void:
 	enemies_defeated = 0
 	running = true
 	game_over = false
+	combo_count = 0
+	combo_timer = 0.0
+	camera_shake = 0.0
 	final_boss_active = false
 	transition_lock = false
 	stage_time = 0.0
@@ -722,6 +815,12 @@ func _spawn_enemy(kind: String, difficulty: float, boss: bool) -> void:
 	enemy.setup(player, difficulty, kind, boss)
 	enemy.defeated.connect(_on_enemy_defeated)
 	enemy.attack_requested.connect(_on_enemy_attack)
+	if boss and enemy.has_signal("health_changed"):
+		enemy.health_changed.connect(_on_boss_health_changed)
+		if boss_bar:
+			boss_bar.max_value = enemy.max_health
+			boss_bar.value = enemy.health
+			boss_bar.show()
 	enemies.append(enemy)
 
 func _on_enemy_attack(origin: Vector3, direction: Vector3, damage: float) -> void:
@@ -734,6 +833,8 @@ func _on_player_fire(origin: Vector3, direction: Vector3, damage: float) -> void
 		return
 	_spawn_projectile(origin, direction, true, damage, 26.0, 4.2, Color("#d0bc95"))
 	score = max(score, 0)
+	camera_shake = max(camera_shake, 0.035)
+	_spawn_hit_fx(origin, Color("#d9c29f"), 0.55)
 	_play_sound("shoot")
 
 func _spawn_projectile(origin: Vector3, direction: Vector3, friendly: bool, damage: float, speed: float, lifetime: float, color: Color) -> void:
@@ -865,7 +966,12 @@ func _stage_objective() -> String:
 func _on_enemy_defeated(enemy: Node3D, boss: bool) -> void:
 	enemies.erase(enemy)
 	enemies_defeated += 1
-	var reward := 220 + stage * 75 + wave * 20
+	if boss and boss_bar:
+		boss_bar.hide()
+	combo_count += 1
+	combo_timer = 4.0
+	var combo_bonus := combo_count * 15
+	var reward := 220 + stage * 75 + wave * 20 + combo_bonus
 	if boss:
 		reward = 3500
 		final_boss_active = false
@@ -902,6 +1008,8 @@ func _on_player_health_changed(value: float) -> void:
 		health_bar.value = value
 	if value <= 30.0 and running:
 		message_label.text = "CRITICAL HEALTH"
+		camera_shake = max(camera_shake, 0.12)
+		_flash_screen(Color("#a26456"))
 
 func _on_player_energy_changed(value: float) -> void:
 	if energy_bar:
@@ -936,6 +1044,46 @@ func _boost_pressed() -> void:
 	if running and not game_over and not get_tree().paused:
 		player.boost()
 
+func _on_player_tactical(origin: Vector3, direction: Vector3) -> void:
+	if not running or game_over or get_tree().paused:
+		return
+	camera_shake = max(camera_shake, 0.18)
+	_spawn_hit_fx(origin, Color("#d7c18c"), 3.4)
+	_play_sound("explode")
+	var radius := 6.2
+	for enemy in enemies.duplicate():
+		if is_instance_valid(enemy) and enemy.has_method("take_damage") and origin.distance_to(enemy.global_position + Vector3.UP * 0.7) <= radius:
+			enemy.take_damage(85.0 + float(stage * 12))
+	_flash_screen(Color("#b8915f"))
+
+func _on_player_shield() -> void:
+	if not running or game_over:
+		return
+	_flash_screen(Color("#8295a5"))
+	message_label.text = "SHIELD ONLINE"
+	_play_sound("stage")
+	var tween := create_tween()
+	tween.tween_interval(0.7)
+	tween.tween_callback(func():
+		if running and not game_over:
+			message_label.text = ""
+	)
+
+func _on_boss_health_changed(current: float, maximum: float) -> void:
+	if boss_bar:
+		boss_bar.max_value = maximum
+		boss_bar.value = current
+		if current <= 0.0:
+			boss_bar.hide()
+
+func _flash_screen(color: Color) -> void:
+	if not screen_flash:
+		return
+	screen_flash.modulate = Color(color.r, color.g, color.b, 0.0)
+	var tween := create_tween()
+	tween.tween_property(screen_flash, "modulate:a", 0.55, 0.035)
+	tween.tween_property(screen_flash, "modulate:a", 0.0, 0.20)
+
 func _toggle_pause() -> void:
 	if not running or game_over:
 		return
@@ -946,6 +1094,8 @@ func _toggle_pause() -> void:
 	_play_sound("hit" if not get_tree().paused else "stage")
 
 func _clear_dynamic_entities() -> void:
+	if boss_bar:
+		boss_bar.hide()
 	for e in enemies:
 		if is_instance_valid(e):
 			e.queue_free()
@@ -1038,6 +1188,9 @@ func _apply_quality() -> void:
 	for light in dynamic_lights:
 		if is_instance_valid(light):
 			light.shadow_enabled = quality_level >= 2
+	for atmosphere in atmosphere_nodes:
+		if is_instance_valid(atmosphere):
+			atmosphere.visible = quality_level >= 1
 	for fx in particle_nodes:
 		if is_instance_valid(fx):
 			fx.amount = max(4, int(float(fx.amount) * 0.8))
@@ -1060,6 +1213,13 @@ func _update_camera(delta: float) -> void:
 	var pitch_basis := Basis(Vector3.RIGHT, camera_pitch)
 	var offset := orbit_basis * (pitch_basis * Vector3(0.0, 6.2, 9.4))
 	var desired := player.global_position + offset
+	if camera_shake > 0.0:
+		var shake_scale := camera_shake * (0.55 + camera_shake * 3.0)
+		desired += Vector3(
+			rng.randf_range(-shake_scale, shake_scale),
+			rng.randf_range(-shake_scale, shake_scale),
+			rng.randf_range(-shake_scale, shake_scale)
+		)
 	camera.global_position = camera.global_position.lerp(desired, min(1.0, delta * 7.0))
 	var target_offset := orbit_basis * Vector3(0.0, 0.7, -1.5)
 	camera.look_at(player.global_position + Vector3.UP * 1.0 + target_offset, Vector3.UP)
@@ -1106,6 +1266,10 @@ func _is_camera_touch_area(position: Vector2) -> bool:
 		return false
 	if boost_button and boost_button.get_global_rect().has_point(position):
 		return false
+	if tactical_button and tactical_button.get_global_rect().has_point(position):
+		return false
+	if shield_button and shield_button.get_global_rect().has_point(position):
+		return false
 	if pause_button and pause_button.visible and pause_button.get_global_rect().has_point(position):
 		return false
 	return true
@@ -1126,6 +1290,16 @@ func _update_hud() -> void:
 		health_bar.value = player.health
 	if energy_bar:
 		energy_bar.value = player.energy
+	if combo_label:
+		combo_label.text = "COMBO x%d" % combo_count
+	if tactical_button:
+		tactical_button.text = "TACTICAL
+READY" if player.tactical_cooldown <= 0.0 else "TACTICAL
+%.1fs" % player.tactical_cooldown
+	if shield_button:
+		shield_button.text = "SHIELD
+READY" if player.shield_cooldown <= 0.0 else "SHIELD
+%.1fs" % player.shield_cooldown
 	if pause_button:
 		pause_button.visible = running and not game_over
 	if running and not game_over:
