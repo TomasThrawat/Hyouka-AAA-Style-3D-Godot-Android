@@ -38,12 +38,12 @@ func play_sound(kind: String) -> void:
 	frames.resize(count)
 	for i in range(count):
 		var t := float(i) / float(SAMPLE_RATE)
-		var attack := min(1.0, t / 0.008)
-		var release := min(1.0, (duration - t) / 0.035)
-		var envelope := max(0.0, min(attack, release))
-		var f := max(35.0, frequency + sweep * (t / duration))
-		var phase := TAU * f * t
-		var sample := 0.0
+		var attack: float = min(1.0, t / 0.008)
+		var release: float = min(1.0, (duration - t) / 0.035)
+		var envelope: float = max(0.0, min(attack, release))
+		var f: float = max(35.0, frequency + sweep * (t / duration))
+		var phase: float = TAU * f * t
+		var sample: float = 0.0
 		match waveform:
 			1:
 				sample = 1.0 if sin(phase) >= 0.0 else -1.0
