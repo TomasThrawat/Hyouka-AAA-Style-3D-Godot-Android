@@ -60,6 +60,7 @@ var pause_panel: PanelContainer
 var pause_button: Button
 var fire_button: Button
 var boost_button: Button
+var start_button: Button
 var joystick: Control
 var touch_layer: CanvasLayer
 var touch_root: Control
@@ -360,7 +361,7 @@ func _build_ui() -> void:
 	message_label.size = Vector2(640, 70)
 	layer.add_child(message_label)
 
-	pause_button = _button("ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¡", Vector2(70, 54), 22)
+	pause_button = _button("PAUSE", Vector2(70, 54), 22)
 	pause_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	pause_button.position = Vector2(-84, 54)
 	pause_button.z_index = 120
@@ -376,24 +377,20 @@ func _build_ui() -> void:
 	var title := _label("FRONTIER // ZERO", 58)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	menu_box.add_child(title)
-	var subtitle := _label("SINGLE-PLAYER 3D CAMPAIGN  ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢  3 SECTORS  ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢  SURVIVAL", 18)
+	var subtitle := _label("SINGLE-PLAYER 3D CAMPAIGN | 3 SECTORS | SURVIVAL", 18)
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	menu_box.add_child(subtitle)
 	var best := _label("BEST SCORE  %06d" % best_score, 17)
 	best.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	menu_box.add_child(best)
-	var new_run := _button("NEW RUN", Vector2(300, 62), 24)
-	new_run.pressed.connect(func():
-		stage = 1
-		score = 0
-		_begin_run(false)
-	)
-	menu_box.add_child(new_run)
+	start_button = _button("START GAME", Vector2(300, 62), 24)
+	start_button.pressed.connect(_start_game_pressed)
+	menu_box.add_child(start_button)
 	if save_system.has_save():
 		var continue_button := _button("CONTINUE", Vector2(300, 56), 20)
 		continue_button.pressed.connect(func(): _begin_run(true))
 		menu_box.add_child(continue_button)
-	var info := _label("MOVE  ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢  FIRE  ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢  BOOST    |    AUTO-SAVE", 16)
+	var info := _label("MOVE | FIRE | BOOST | AUTO-SAVE", 16)
 	info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	menu_box.add_child(info)
 	layer.add_child(menu_panel)
@@ -503,6 +500,12 @@ func _place_touch_button(button: Button, left: float, top: float, right: float, 
 	button.z_index = 101
 	button.mouse_filter = Control.MOUSE_FILTER_STOP
 
+func _start_game_pressed() -> void:
+	if running or game_over:
+		return
+	_begin_run(false)
+
+
 func _begin_run(continue_run: bool) -> void:
 	if continue_run:
 		save_system.load_state()
@@ -521,13 +524,16 @@ func _begin_run(continue_run: bool) -> void:
 	pickup_timer = 2.5
 	get_tree().paused = false
 	menu_panel.hide()
+	menu_panel.visible = false
+	menu_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_set_touch_controls_visible(true)
 	pause_panel.hide()
+	pause_button.show()
 	player.reset_for_run()
 	player.position = spawn_position
 	_clear_dynamic_entities()
 	_rebuild_stage(stage)
-	message_label.text = "STAGE %02d  ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢  DEPLOY" % stage
+	message_label.text = "STAGE %02d | DEPLOY" % stage
 	_play_sound("stage")
 	objective_label.text = _stage_objective()
 	_update_hud()
@@ -540,6 +546,8 @@ func _show_menu() -> void:
 	_clear_dynamic_entities()
 	pause_panel.hide()
 	menu_panel.show()
+	menu_panel.visible = true
+	menu_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	pause_button.hide()
 	for b in touch_controls:
 		b.hide()
@@ -570,7 +578,7 @@ func _start_wave() -> void:
 	if stage == 3 and wave == 4:
 		_spawn_enemy("juggernaut", difficulty + 1.5, true)
 		final_boss_active = true
-		message_label.text = "WARDEN PRIME  ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢  BOSS"
+		message_label.text = "WARDEN PRIME | BOSS"
 		objective_label.text = "OBJECTIVE: DEFEAT THE WARDEN"
 	else:
 		for i in range(count):
@@ -718,7 +726,7 @@ func _complete_stage() -> void:
 		_win_game()
 		return
 	message_label.text = "STAGE %02d COMPLETE" % stage
-	objective_label.text = "AUTO-SAVING  ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢  NEXT SECTOR UNLOCKED"
+	objective_label.text = "AUTO-SAVING | NEXT SECTOR UNLOCKED"
 	_play_sound("stage")
 	var tween := create_tween()
 	tween.tween_interval(2.2)
@@ -750,7 +758,7 @@ func _on_enemy_defeated(enemy: Node3D, boss: bool) -> void:
 		score += reward
 		save_system.save_state(4, score, max(best_score, score))
 		message_label.text = "WARDEN PRIME DEFEATED"
-		objective_label.text = "OBJECTIVE COMPLETE  ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢  CAMPAIGN CLEAR"
+		objective_label.text = "OBJECTIVE COMPLETE | CAMPAIGN CLEAR"
 	else:
 		score += reward
 	_spawn_hit_fx(enemy.global_position + Vector3.UP * 0.7, Color("#a8745c") if not boss else Color("#d2bf98"), 2.8 if boss else 1.5)
@@ -768,7 +776,7 @@ func _win_game() -> void:
 	running = false
 	best_score = max(best_score, score)
 	save_system.save_state(4, score, best_score)
-	message_label.text = "CAMPAIGN COMPLETE  ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢  %06d" % score
+	message_label.text = "CAMPAIGN COMPLETE | %06d" % score
 	objective_label.text = "ALL 3 STAGES CLEARED"
 	for b in touch_controls:
 		b.hide()
@@ -790,8 +798,8 @@ func _on_player_died() -> void:
 	running = false
 	best_score = max(best_score, score)
 	save_system.save_state(stage, score, best_score)
-	message_label.text = "RUN ENDED  ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢  SCORE %06d" % score
-	objective_label.text = "PROGRESS SAVED  ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢  STAGE %02d" % stage
+	message_label.text = "RUN ENDED | SCORE %06d" % score
+	objective_label.text = "PROGRESS SAVED | STAGE %02d" % stage
 	for b in touch_controls:
 		b.hide()
 	pause_button.hide()
@@ -944,7 +952,12 @@ func _update_camera(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if not running or game_over or get_tree().paused or not joystick:
+	if not running:
+		if event is InputEventScreenTouch and event.pressed and start_button and start_button.visible and start_button.get_global_rect().has_point(event.position):
+			_start_game_pressed()
+			get_viewport().set_input_as_handled()
+		return
+	if game_over or get_tree().paused or not joystick:
 		return
 	if event is InputEventScreenTouch:
 		if event.pressed:
@@ -1012,7 +1025,7 @@ func _update_hud() -> void:
 	if score_label:
 		score_label.text = "SCORE %06d" % score
 	if ammo_label:
-		ammo_label.text = "BLASTER  ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢  %.1fs" % player.fire_cooldown
+		ammo_label.text = "BLASTER | %.1fs" % player.fire_cooldown
 	if health_bar:
 		health_bar.value = player.health
 	if energy_bar:
