@@ -360,7 +360,7 @@ func _build_ui() -> void:
 	message_label.size = Vector2(640, 70)
 	layer.add_child(message_label)
 
-	pause_button = _button("ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ¡", Vector2(70, 54), 22)
+	pause_button = _button("ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¡", Vector2(70, 54), 22)
 	pause_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	pause_button.position = Vector2(-84, 54)
 	pause_button.z_index = 120
@@ -376,7 +376,7 @@ func _build_ui() -> void:
 	var title := _label("FRONTIER // ZERO", 58)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	menu_box.add_child(title)
-	var subtitle := _label("SINGLE-PLAYER 3D CAMPAIGN  ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ¢  3 SECTORS  ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ¢  SURVIVAL", 18)
+	var subtitle := _label("SINGLE-PLAYER 3D CAMPAIGN  ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢  3 SECTORS  ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢  SURVIVAL", 18)
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	menu_box.add_child(subtitle)
 	var best := _label("BEST SCORE  %06d" % best_score, 17)
@@ -393,7 +393,7 @@ func _build_ui() -> void:
 		var continue_button := _button("CONTINUE", Vector2(300, 56), 20)
 		continue_button.pressed.connect(func(): _begin_run(true))
 		menu_box.add_child(continue_button)
-	var info := _label("MOVE  ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ¢  FIRE  ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ¢  BOOST    |    AUTO-SAVE", 16)
+	var info := _label("MOVE  ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢  FIRE  ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢  BOOST    |    AUTO-SAVE", 16)
 	info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	menu_box.add_child(info)
 	layer.add_child(menu_panel)
@@ -527,7 +527,7 @@ func _begin_run(continue_run: bool) -> void:
 	player.position = spawn_position
 	_clear_dynamic_entities()
 	_rebuild_stage(stage)
-	message_label.text = "STAGE %02d  ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ¢  DEPLOY" % stage
+	message_label.text = "STAGE %02d  ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢  DEPLOY" % stage
 	_play_sound("stage")
 	objective_label.text = _stage_objective()
 	_update_hud()
@@ -570,7 +570,7 @@ func _start_wave() -> void:
 	if stage == 3 and wave == 4:
 		_spawn_enemy("juggernaut", difficulty + 1.5, true)
 		final_boss_active = true
-		message_label.text = "WARDEN PRIME  ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ¢  BOSS"
+		message_label.text = "WARDEN PRIME  ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢  BOSS"
 		objective_label.text = "OBJECTIVE: DEFEAT THE WARDEN"
 	else:
 		for i in range(count):
@@ -718,7 +718,7 @@ func _complete_stage() -> void:
 		_win_game()
 		return
 	message_label.text = "STAGE %02d COMPLETE" % stage
-	objective_label.text = "AUTO-SAVING  ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ¢  NEXT SECTOR UNLOCKED"
+	objective_label.text = "AUTO-SAVING  ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢  NEXT SECTOR UNLOCKED"
 	_play_sound("stage")
 	var tween := create_tween()
 	tween.tween_interval(2.2)
@@ -750,7 +750,7 @@ func _on_enemy_defeated(enemy: Node3D, boss: bool) -> void:
 		score += reward
 		save_system.save_state(4, score, max(best_score, score))
 		message_label.text = "WARDEN PRIME DEFEATED"
-		objective_label.text = "OBJECTIVE COMPLETE  ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ¢  CAMPAIGN CLEAR"
+		objective_label.text = "OBJECTIVE COMPLETE  ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢  CAMPAIGN CLEAR"
 	else:
 		score += reward
 	_spawn_hit_fx(enemy.global_position + Vector3.UP * 0.7, Color("#a8745c") if not boss else Color("#d2bf98"), 2.8 if boss else 1.5)
@@ -768,7 +768,7 @@ func _win_game() -> void:
 	running = false
 	best_score = max(best_score, score)
 	save_system.save_state(4, score, best_score)
-	message_label.text = "CAMPAIGN COMPLETE  ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ¢  %06d" % score
+	message_label.text = "CAMPAIGN COMPLETE  ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢  %06d" % score
 	objective_label.text = "ALL 3 STAGES CLEARED"
 	for b in touch_controls:
 		b.hide()
@@ -790,8 +790,8 @@ func _on_player_died() -> void:
 	running = false
 	best_score = max(best_score, score)
 	save_system.save_state(stage, score, best_score)
-	message_label.text = "RUN ENDED  ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ¢  SCORE %06d" % score
-	objective_label.text = "PROGRESS SAVED  ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ¢  STAGE %02d" % stage
+	message_label.text = "RUN ENDED  ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢  SCORE %06d" % score
+	objective_label.text = "PROGRESS SAVED  ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢  STAGE %02d" % stage
 	for b in touch_controls:
 		b.hide()
 	pause_button.hide()
@@ -863,11 +863,34 @@ func _spawn_hit_fx(pos: Vector3, color: Color, scale_value: float) -> void:
 	add_child(fx)
 	particle_nodes.append(fx)
 	fx.emitting = true
+
+	var impact_ring := MeshInstance3D.new()
+	impact_ring.name = "ImpactRing"
+	var torus := TorusMesh.new()
+	torus.inner_radius = 0.16 * scale_value
+	torus.outer_radius = 0.23 * scale_value
+	var ring_mat := _mat(color, 0.05, 0.20, color, 1.8)
+	ring_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	torus.material = ring_mat
+	impact_ring.mesh = torus
+	impact_ring.position = pos + Vector3.UP * 0.02
+	impact_ring.scale = Vector3.ONE * 0.35
+	add_child(impact_ring)
+	var ring_tween := create_tween()
+	ring_tween.set_parallel(true)
+	ring_tween.tween_property(impact_ring, "scale", Vector3.ONE * (2.0 + scale_value * 0.55), 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	ring_tween.tween_property(ring_mat, "emission_energy_multiplier", 0.0, 0.16)
+	ring_tween.chain().tween_callback(func():
+		if is_instance_valid(impact_ring):
+			impact_ring.queue_free()
+	)
+
 	get_tree().create_timer(fx.lifetime + 0.15).timeout.connect(func():
 		if is_instance_valid(fx):
 			particle_nodes.erase(fx)
 			fx.queue_free()
 	)
+
 
 func _profile_performance(delta: float) -> void:
 	profile_timer += delta
@@ -989,7 +1012,7 @@ func _update_hud() -> void:
 	if score_label:
 		score_label.text = "SCORE %06d" % score
 	if ammo_label:
-		ammo_label.text = "BLASTER  ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ¢  %.1fs" % player.fire_cooldown
+		ammo_label.text = "BLASTER  ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢  %.1fs" % player.fire_cooldown
 	if health_bar:
 		health_bar.value = player.health
 	if energy_bar:
