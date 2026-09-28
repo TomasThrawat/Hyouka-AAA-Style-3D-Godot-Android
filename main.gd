@@ -64,7 +64,6 @@ var joystick: Control
 var touch_layer: CanvasLayer
 var touch_root: Control
 var touch_controls: Array[Control] = []
-var joystick_touch_pointer := -1
 var camera_touch_pointer := -1
 var camera_touch_last := Vector2.ZERO
 var camera_yaw := 0.0
@@ -429,7 +428,7 @@ func _build_ui() -> void:
 	touch_root = Control.new()
 	touch_root.name = "TouchRoot"
 	touch_root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	touch_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	touch_root.mouse_filter = Control.MOUSE_FILTER_PASS
 	touch_root.z_index = 100
 	touch_layer.add_child(touch_root)
 
@@ -447,6 +446,8 @@ func _create_touch_controls() -> void:
 	joystick.mouse_filter = Control.MOUSE_FILTER_STOP
 	touch_root.add_child(joystick)
 	touch_controls.append(joystick)
+	joystick.value_changed.connect(_on_joystick_changed)
+	joystick.released.connect(_on_joystick_released)
 
 	fire_button = _button("FIRE", Vector2(168, 104), 23)
 	fire_button.set_anchors_preset(Control.PRESET_TOP_LEFT)
@@ -840,72 +841,34 @@ func _clear_dynamic_entities() -> void:
 func _spawn_hit_fx(pos: Vector3, color: Color, scale_value: float) -> void:
 	if quality_level <= 0 and scale_value < 1.4:
 		return
-
 	var fx := GPUParticles3D.new()
 	fx.one_shot = true
-	fx.amount = int(9 + 7 * scale_value) if quality_level >= 2 else int(6 + 4 * scale_value)
-	fx.lifetime = 0.30 + scale_value * 0.065
+	fx.amount = int(7 + 5 * scale_value) if quality_level >= 2 else int(5 + 3 * scale_value)
+	fx.lifetime = 0.34 + scale_value * 0.06
 	fx.explosiveness = 1.0
 	fx.position = pos
 	var pm := ParticleProcessMaterial.new()
 	pm.direction = Vector3.UP
 	pm.spread = 180.0
-	pm.initial_velocity_min = 2.4 * scale_value
-	pm.initial_velocity_max = 6.0 * scale_value
-	pm.scale_min = 0.028
-	pm.scale_max = 0.085 * scale_value
-	pm.gravity = Vector3(0, -2.5, 0)
+	pm.initial_velocity_min = 2.0 * scale_value
+	pm.initial_velocity_max = 5.0 * scale_value
+	pm.scale_min = 0.035
+	pm.scale_max = 0.09 * scale_value
 	pm.color = color
 	fx.process_material = pm
-	var spark_mesh := SphereMesh.new()
-	spark_mesh.radius = 0.055
-	spark_mesh.height = 0.11
-	spark_mesh.material = _mat(color, 0.05, 0.14, color, 2.8)
-	fx.draw_pass_1 = spark_mesh
+	var sphere := SphereMesh.new()
+	sphere.radius = 0.06
+	sphere.height = 0.12
+	sphere.material = _mat(color, 0.0, 0.12, color, 3.0)
+	fx.draw_pass_1 = sphere
 	add_child(fx)
 	particle_nodes.append(fx)
 	fx.emitting = true
-
-	var ring := MeshInstance3D.new()
-	ring.name = "ImpactShockwave"
-	var torus := TorusMesh.new()
-	torus.inner_radius = 0.10 * scale_value
-	torus.outer_radius = 0.16 * scale_value
-	var ring_mat := _mat(color, 0.05, 0.18, color, 2.4)
-	ring_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	ring.mesh = torus
-	ring.position = pos + Vector3.UP * 0.02
-	ring.scale = Vector3(0.55, 0.55, 0.55)
-	add_child(ring)
-	var ring_tween := create_tween()
-	ring_tween.set_parallel(true)
-	ring_tween.tween_property(ring, "scale", Vector3.ONE * (3.1 + scale_value * 0.8), 0.20).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	ring_tween.tween_property(ring_mat, "emission_energy_multiplier", 0.0, 0.16)
-	ring_tween.chain().tween_callback(func():
-		if is_instance_valid(ring):
-			ring.queue_free()
-	)
-
-	var flash := OmniLight3D.new()
-	flash.name = "ImpactFlash"
-	flash.light_color = color
-	flash.light_energy = 3.2 + scale_value * 1.4
-	flash.omni_range = 2.4 + scale_value * 1.5
-	flash.position = pos
-	add_child(flash)
-	var flash_tween := create_tween()
-	flash_tween.tween_property(flash, "light_energy", 0.0, 0.11)
-	flash_tween.tween_callback(func():
-		if is_instance_valid(flash):
-			flash.queue_free()
-	)
-
-	get_tree().create_timer(fx.lifetime + 0.12).timeout.connect(func():
+	get_tree().create_timer(fx.lifetime + 0.15).timeout.connect(func():
 		if is_instance_valid(fx):
 			particle_nodes.erase(fx)
 			fx.queue_free()
 	)
-
 
 func _profile_performance(delta: float) -> void:
 	profile_timer += delta
@@ -956,33 +919,6 @@ func _update_camera(delta: float) -> void:
 	camera.global_position = camera.global_position.lerp(desired, min(1.0, delta * 7.0))
 	var target_offset := orbit_basis * Vector3(0.0, 0.7, -1.5)
 	camera.look_at(player.global_position + Vector3.UP * 1.0 + target_offset, Vector3.UP)
-
-
-func _input(event: InputEvent) -> void:
-	if not running or game_over or get_tree().paused or not joystick:
-		return
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			if joystick_touch_pointer == -1 and joystick.get_global_rect().has_point(event.position):
-				joystick_touch_pointer = event.index
-				var local_position: Vector2 = joystick.get_global_transform().affine_inverse() * event.position
-				var center: Vector2 = joystick.size * 0.5
-				var stick_value: Vector2 = (local_position - center).limit_length(joystick.stick_radius) / joystick.stick_radius
-				joystick.set_virtual_value(stick_value)
-				player.set_move_input(stick_value)
-				get_viewport().set_input_as_handled()
-		elif event.index == joystick_touch_pointer:
-			joystick_touch_pointer = -1
-			joystick.set_virtual_value(Vector2.ZERO)
-			player.clear_move_input()
-			get_viewport().set_input_as_handled()
-	elif event is InputEventScreenDrag and event.index == joystick_touch_pointer:
-		var local_position: Vector2 = joystick.get_global_transform().affine_inverse() * event.position
-		var center: Vector2 = joystick.size * 0.5
-		var stick_value: Vector2 = (local_position - center).limit_length(joystick.stick_radius) / joystick.stick_radius
-		joystick.set_virtual_value(stick_value)
-		player.set_move_input(stick_value)
-		get_viewport().set_input_as_handled()
 
 
 func _unhandled_input(event: InputEvent) -> void:
