@@ -1,5 +1,7 @@
 extends CharacterBody3D
 
+const BAKED_CHARACTER_SCRIPT = preload("res://baked_character.gd")
+
 signal defeated(enemy: Node3D, boss: bool)
 signal attack_requested(origin: Vector3, direction: Vector3, damage: float)
 
@@ -55,15 +57,16 @@ func _build_visual() -> void:
 	visual_root = Node3D.new()
 	visual_root.name = "Visual"
 	add_child(visual_root)
-
-	var packed := preload("res://assets/worker_human.glb") as PackedScene
-	var model := packed.instantiate() as Node3D
-	model.name = "CharacterModel"
-	model.scale = Vector3.ONE * (1.10 if enemy_type == "juggernaut" else 1.03)
+	var tint: Color = Color("#777168")
+	if enemy_type == "juggernaut":
+		tint = Color("#635b50")
+	elif enemy_type == "striker":
+		tint = Color("#858078")
+	var model_scale: float = 1.10 if enemy_type == "juggernaut" else 1.03
+	var model: Node3D = BAKED_CHARACTER_SCRIPT.create("res://assets/worker_human.meshbin", tint, model_scale)
 	visual_root.add_child(model)
-
-	var collider := CollisionShape3D.new()
-	var shape := CapsuleShape3D.new()
+	var collider: CollisionShape3D = CollisionShape3D.new()
+	var shape: CapsuleShape3D = CapsuleShape3D.new()
 	shape.radius = 0.50 if enemy_type != "juggernaut" else 0.66
 	shape.height = 1.80 if enemy_type != "juggernaut" else 2.20
 	collider.shape = shape

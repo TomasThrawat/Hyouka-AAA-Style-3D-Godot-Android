@@ -1,5 +1,7 @@
 extends CharacterBody3D
 
+const BAKED_CHARACTER_SCRIPT = preload("res://baked_character.gd")
+
 signal boost_requested
 signal fire_requested(origin: Vector3, direction: Vector3, damage: float)
 signal health_changed(value: float)
@@ -37,15 +39,11 @@ func _ready() -> void:
 	_build_visual()
 
 func _build_visual() -> void:
-	var packed := preload("res://assets/player_human.glb") as PackedScene
-	var model := packed.instantiate() as Node3D
-	model.name = "CharacterModel"
-	model.scale = Vector3.ONE * 1.04
-	add_child(model)
-	visual_root = model
-
-	var collider := CollisionShape3D.new()
-	var shape := CapsuleShape3D.new()
+	visual_root = BAKED_CHARACTER_SCRIPT.create("res://assets/player_human.meshbin", Color("#aaa49a"), 1.04)
+	visual_root.name = "CharacterModel"
+	add_child(visual_root)
+	var collider: CollisionShape3D = CollisionShape3D.new()
+	var shape: CapsuleShape3D = CapsuleShape3D.new()
 	shape.radius = 0.42
 	shape.height = 1.78
 	collider.shape = shape
