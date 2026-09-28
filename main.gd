@@ -447,13 +447,13 @@ func _create_touch_controls() -> void:
 	touch_controls.append(joystick)
 
 	fire_button = _button("FIRE", Vector2(168, 104), 23)
-	_place_touch_button(fire_button, -210.0, -148.0, -38.0, -44.0)
+	_place_touch_button(fire_button, -210.0, -230.0, -38.0, -120.0)
 	_configure_touch_button(fire_button, Color("#2c2926"), Color("#d1a66f"))
 	touch_root.add_child(fire_button)
 	touch_controls.append(fire_button)
 
 	boost_button = _button("BOOST", Vector2(168, 64), 18)
-	_place_touch_button(boost_button, -210.0, -74.0, -38.0, -44.0)
+	_place_touch_button(boost_button, -210.0, -112.0, -38.0, -44.0)
 	_configure_touch_button(boost_button, Color("#242423"), Color("#8d8170"))
 	touch_root.add_child(boost_button)
 	touch_controls.append(boost_button)
@@ -942,6 +942,31 @@ func _button(text_value: String, size: Vector2, font_size: int) -> Button:
 	b.custom_minimum_size = size
 	b.add_theme_font_size_override("font_size", font_size)
 	return b
+
+func _configure_touch_button(button: Button, fill_color: Color, border_color: Color) -> void:
+	button.focus_mode = Control.FOCUS_NONE
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
+	for state in ["normal", "hover", "pressed", "disabled", "focus"]:
+		var style := StyleBoxFlat.new()
+		style.bg_color = fill_color if state != "pressed" else fill_color.lightened(0.10)
+		style.bg_color.a = 0.94
+		style.border_color = border_color
+		style.set_border_width_all(2)
+		style.corner_radius_top_left = 18
+		style.corner_radius_top_right = 18
+		style.corner_radius_bottom_left = 18
+		style.corner_radius_bottom_right = 18
+		style.shadow_color = Color(0.0, 0.0, 0.0, 0.72)
+		style.shadow_size = 7
+		style.content_margin_left = 12
+		style.content_margin_right = 12
+		style.content_margin_top = 8
+		style.content_margin_bottom = 8
+		button.add_theme_stylebox_override(state, style)
+	button.add_theme_font_size_override("font_size", 23 if button.text == "FIRE" else 18)
+	button.add_theme_color_override("font_color", Color("#f3eee4"))
+	button.add_theme_color_override("font_hover_color", Color("#fffaf0"))
+	button.add_theme_color_override("font_pressed_color", Color("#fffaf0"))
 
 func _mat(color: Color, metallic: float, roughness: float, emission: Color, energy: float) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
