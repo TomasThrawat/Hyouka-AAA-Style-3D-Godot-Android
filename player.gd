@@ -1,5 +1,7 @@
 extends CharacterBody3D
 
+const OBJ_CHARACTER_SCRIPT = preload("res://obj_character.gd")
+
 signal boost_requested
 signal fire_requested(origin: Vector3, direction: Vector3, damage: float)
 signal health_changed(value: float)
@@ -30,6 +32,7 @@ var right_leg: Node3D
 var weapon: Node3D
 var weapon_flash: OmniLight3D
 var visual_root: Node3D
+var character_mesh: MeshInstance3D
 
 func _ready() -> void:
 	collision_layer = 1
@@ -37,16 +40,11 @@ func _ready() -> void:
 	_build_visual()
 
 func _build_visual() -> void:
-	var resource: Resource = preload("res://assets/player_human.glb")
-	if not resource is PackedScene:
-		return
-	var packed: PackedScene = resource as PackedScene
-	var model := packed.instantiate() as Node3D
-	model.name = "CharacterModel"
-	model.position = Vector3.ZERO
-	model.scale = Vector3.ONE * 1.04
-	add_child(model)
-	visual_root = model
+	visual_root = OBJ_CHARACTER_SCRIPT.build("res://assets/player_human.obj", Color("#aaa49a"), 1.78, 1.04)
+	visual_root.name = "CharacterModel"
+	add_child(visual_root)
+	character_mesh = visual_root.get_node("CharacterMesh") as MeshInstance3D
+
 	var collider := CollisionShape3D.new()
 	var shape := CapsuleShape3D.new()
 	shape.radius = 0.42

@@ -1,5 +1,7 @@
 extends CharacterBody3D
 
+const OBJ_CHARACTER_SCRIPT = preload("res://obj_character.gd")
+
 signal defeated(enemy: Node3D, boss: bool)
 signal attack_requested(origin: Vector3, direction: Vector3, damage: float)
 
@@ -17,6 +19,7 @@ var cached_direction := Vector3.FORWARD
 var cached_distance := 999.0
 var boss := false
 var visual_root: Node3D
+var character_mesh: MeshInstance3D
 
 func setup(target_node: Node3D, difficulty: float, kind: String, is_boss: bool) -> void:
 	target = target_node
@@ -52,14 +55,20 @@ func setup(target_node: Node3D, difficulty: float, kind: String, is_boss: bool) 
 	_build_visual()
 
 func _build_visual() -> void:
-	var resource: Resource = preload("res://assets/worker_human.glb")
-	if not resource is Mesh:
-		return
-	var model := MeshInstance3D.new()
-	model.name = "CharacterModel"
-	model.mesh = resource as Mesh
-	model.scale = Vector3.ONE * (1.10 if enemy_type == "juggernaut" else 1.0)
+	visual_root = Node3D.new()
+	visual_root.name = "Visual"
+	add_child(visual_root)
+
+	var tint := Color("#777168")
+	if enemy_type == "juggernaut":
+		tint = Color("#635b50")
+	elif enemy_type == "striker":
+		tint = Color("#858078")
+	var model_scale := 1.10 if enemy_type == "juggernaut" else 1.03
+	var model := OBJ_CHARACTER_SCRIPT.build("res://assets/worker_human.obj", tint, 1.80, model_scale)
 	visual_root.add_child(model)
+	character_mesh = model.get_node("CharacterMesh") as MeshInstance3D
+
 	var collider := CollisionShape3D.new()
 	var shape := CapsuleShape3D.new()
 	shape.radius = 0.50 if enemy_type != "juggernaut" else 0.66
@@ -67,6 +76,7 @@ func _build_visual() -> void:
 	collider.shape = shape
 	collider.position.y = 0.90 if enemy_type != "juggernaut" else 1.10
 	add_child(collider)
+
 
 func _physics_process(delta: float) -> void:
 	if get_tree().paused or target == null:

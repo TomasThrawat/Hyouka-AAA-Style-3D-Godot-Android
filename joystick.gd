@@ -62,14 +62,13 @@ func _gui_input(event: InputEvent) -> void:
 		_set_value_from_local(event.position)
 		accept_event()
 
-func _set_value_from_local(local: Vector2) -> void:(screen_position: Vector2) -> void:
-	var local := get_global_transform().affine_inverse() * screen_position
+func _set_value_from_local(local: Vector2) -> void:
 	var center := size * 0.5
 	var offset := local - center
 	if offset.length() > stick_radius:
 		offset = offset.normalized() * stick_radius
 	stick_value = offset / stick_radius
-	if stick_value.length() < 0.12:
+	if stick_value.length() < 0.10:
 		stick_value = Vector2.ZERO
 	queue_redraw()
 	value_changed.emit(stick_value)
