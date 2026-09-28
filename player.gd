@@ -37,7 +37,7 @@ func _ready() -> void:
 	_build_visual()
 
 func _build_visual() -> void:
-	var resource: Resource = load("res://assets/player_human.glb")
+	var resource: Resource = load("res://assets/player_human.obj")
 	if not resource is PackedScene:
 		return
 	var packed: PackedScene = resource as PackedScene

@@ -52,11 +52,12 @@ func setup(target_node: Node3D, difficulty: float, kind: String, is_boss: bool) 
 	_build_visual()
 
 func _build_visual() -> void:
-	var packed := load("res://assets/worker_human.glb") as PackedScene
-	if packed == null:
+	var resource: Resource = load("res://assets/worker_human.obj")
+	if not resource is Mesh:
 		return
-	var model := packed.instantiate() as Node3D
+	var model := MeshInstance3D.new()
 	model.name = "CharacterModel"
+	model.mesh = resource as Mesh
 	model.scale = Vector3.ONE * (1.10 if enemy_type == "juggernaut" else 1.0)
 	visual_root.add_child(model)
 	var collider := CollisionShape3D.new()
@@ -66,7 +67,6 @@ func _build_visual() -> void:
 	collider.shape = shape
 	collider.position.y = 0.90 if enemy_type != "juggernaut" else 1.10
 	add_child(collider)
-
 
 func _physics_process(delta: float) -> void:
 	if get_tree().paused or target == null:
