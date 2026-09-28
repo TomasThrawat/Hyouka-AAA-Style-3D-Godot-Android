@@ -8,6 +8,7 @@ signal released
 
 var active_pointer := -1
 var mouse_active := false
+var touch_start_time := 0.0
 var stick_value := Vector2.ZERO
 
 func _ready() -> void:
@@ -63,7 +64,7 @@ func _input(event: InputEvent) -> void:
 		accept_event()
 
 func _set_value_from_screen(screen_position: Vector2) -> void:
-	var local := screen_position - global_position
+	var local := get_global_transform().affine_inverse() * screen_position
 	var center := size * 0.5
 	var offset := local - center
 	if offset.length() > stick_radius:

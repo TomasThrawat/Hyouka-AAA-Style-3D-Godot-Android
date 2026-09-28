@@ -39,96 +39,125 @@ func _build_visual() -> void:
 	torso = Node3D.new()
 	torso.name = "Torso"
 	add_child(torso)
+
 	var chest := MeshInstance3D.new()
-	var chest_mesh := BoxMesh.new()
-	chest_mesh.size = Vector3(1.05, 1.15, 0.68)
-	chest_mesh.material = _mat(Color("#1b334b"), 0.46, 0.26, Color("#37d8ff"), 1.2)
+	var chest_mesh := CapsuleMesh.new()
+	chest_mesh.radius = 0.48
+	chest_mesh.height = 1.18
+	chest_mesh.material = _mat(Color("#32302c"), 0.72, 0.34, Color("#a88452"), 0.18)
 	chest.mesh = chest_mesh
-	chest.position.y = 1.25
+	chest.scale = Vector3(1.0, 1.0, 0.72)
+	chest.position.y = 1.24
 	torso.add_child(chest)
+
+	var abdomen := MeshInstance3D.new()
+	var abdomen_mesh := CapsuleMesh.new()
+	abdomen_mesh.radius = 0.34
+	abdomen_mesh.height = 0.72
+	abdomen_mesh.material = _mat(Color("#242321"), 0.64, 0.42, Color("#6f5b43"), 0.10)
+	abdomen.mesh = abdomen_mesh
+	abdomen.scale = Vector3(1.0, 1.0, 0.72)
+	abdomen.position = Vector3(0, 0.60, 0)
+	torso.add_child(abdomen)
 
 	head = Node3D.new()
 	head.name = "Head"
 	torso.add_child(head)
 	var helmet := MeshInstance3D.new()
 	var helmet_mesh := SphereMesh.new()
-	helmet_mesh.radius = 0.43
+	helmet_mesh.radius = 0.39
 	helmet_mesh.height = 0.72
-	helmet_mesh.material = _mat(Color("#263f57"), 0.5, 0.18, Color("#6eefff"), 1.4)
+	helmet_mesh.material = _mat(Color("#3b3935"), 0.68, 0.30, Color("#b18c59"), 0.16)
 	helmet.mesh = helmet_mesh
-	helmet.position = Vector3(0, 0.78, 0)
+	helmet.position = Vector3(0, 0.82, 0)
 	head.add_child(helmet)
 	var visor := MeshInstance3D.new()
-	var visor_mesh := BoxMesh.new()
-	visor_mesh.size = Vector3(0.58, 0.18, 0.4)
-	visor_mesh.material = _mat(Color("#dcfbff"), 0.18, 0.08, Color("#5cecff"), 3.0)
+	var visor_mesh := CapsuleMesh.new()
+	visor_mesh.radius = 0.17
+	visor_mesh.height = 0.48
+	visor_mesh.material = _mat(Color("#171817"), 0.78, 0.18, Color("#c09a60"), 0.30)
 	visor.mesh = visor_mesh
-	visor.position = Vector3(0, 0.76, -0.32)
+	visor.scale = Vector3(1.0, 0.34, 0.38)
+	visor.rotation_degrees.z = 90.0
+	visor.position = Vector3(0, 0.79, -0.33)
 	head.add_child(visor)
 
 	for x in [-1.0, 1.0]:
 		var shoulder := MeshInstance3D.new()
 		var shoulder_mesh := SphereMesh.new()
-		shoulder_mesh.radius = 0.23
-		shoulder_mesh.height = 0.46
-		shoulder_mesh.material = _mat(Color("#315473"), 0.4, 0.25, Color("#2bd7ff"), 0.9)
+		shoulder_mesh.radius = 0.24
+		shoulder_mesh.height = 0.44
+		shoulder_mesh.material = _mat(Color("#403d37"), 0.70, 0.30, Color("#8d7049"), 0.12)
 		shoulder.mesh = shoulder_mesh
-		shoulder.position = Vector3(x * 0.7, 1.4, 0)
+		shoulder.position = Vector3(x * 0.65, 1.40, 0)
 		torso.add_child(shoulder)
+
 		var arm := MeshInstance3D.new()
 		var arm_mesh := CapsuleMesh.new()
-		arm_mesh.radius = 0.18
-		arm_mesh.height = 0.9
-		arm_mesh.material = _mat(Color("#17304a"), 0.35, 0.32, Color("#1b90ba"), 0.65)
+		arm_mesh.radius = 0.16
+		arm_mesh.height = 0.94
+		arm_mesh.material = _mat(Color("#292825"), 0.60, 0.40, Color("#6e5941"), 0.10)
 		arm.mesh = arm_mesh
-		arm.position = Vector3(x * 0.73, 0.82, -0.02)
-		arm.rotation_degrees.z = x * -10.0
+		arm.position = Vector3(x * 0.70, 0.98, -0.02)
+		arm.rotation_degrees.z = x * -8.0
 		torso.add_child(arm)
 
-	left_leg = _build_leg("LeftLeg", -0.28)
-	right_leg = _build_leg("RightLeg", 0.28)
+	left_leg = _build_leg("LeftLeg", -0.27)
+	right_leg = _build_leg("RightLeg", 0.27)
 
 	weapon = Node3D.new()
 	weapon.name = "Weapon"
-	weapon.position = Vector3(0, 1.05, -0.55)
+	weapon.position = Vector3(0.0, 1.03, -0.58)
 	add_child(weapon)
 	var barrel := MeshInstance3D.new()
 	var barrel_mesh := CylinderMesh.new()
-	barrel_mesh.top_radius = 0.105
-	barrel_mesh.bottom_radius = 0.14
-	barrel_mesh.height = 0.72
-	barrel_mesh.material = _mat(Color("#233b50"), 0.58, 0.2, Color("#69ecff"), 1.5)
+	barrel_mesh.top_radius = 0.095
+	barrel_mesh.bottom_radius = 0.13
+	barrel_mesh.height = 0.76
+	barrel_mesh.material = _mat(Color("#181917"), 0.78, 0.28, Color("#b18c59"), 0.20)
 	barrel.mesh = barrel_mesh
-	barrel.rotation_degrees.x = 90
+	barrel.rotation_degrees.x = 90.0
 	barrel.position.z = -0.34
 	weapon.add_child(barrel)
 
+	var grip := MeshInstance3D.new()
+	var grip_mesh := CapsuleMesh.new()
+	grip_mesh.radius = 0.12
+	grip_mesh.height = 0.42
+	grip_mesh.material = _mat(Color("#232220"), 0.58, 0.44, Color("#6e5a43"), 0.08)
+	grip.mesh = grip_mesh
+	grip.rotation_degrees.x = 15.0
+	grip.position = Vector3(0, -0.20, 0.05)
+	weapon.add_child(grip)
+
 	var pack := MeshInstance3D.new()
-	var pack_mesh := BoxMesh.new()
-	pack_mesh.size = Vector3(0.72, 0.88, 0.3)
-	pack_mesh.material = _mat(Color("#122337"), 0.35, 0.55, Color("#224969"), 0.5)
+	var pack_mesh := CapsuleMesh.new()
+	pack_mesh.radius = 0.25
+	pack_mesh.height = 0.88
+	pack_mesh.material = _mat(Color("#242320"), 0.55, 0.48, Color("#6d5942"), 0.08)
 	pack.mesh = pack_mesh
-	pack.position = Vector3(0, 1.05, 0.48)
+	pack.scale = Vector3(1.2, 1.0, 0.55)
+	pack.position = Vector3(0, 1.04, 0.48)
 	add_child(pack)
 
 	var thruster := GPUParticles3D.new()
 	thruster.name = "Thruster"
-	thruster.amount = 8
-	thruster.lifetime = 0.28
+	thruster.amount = 6
+	thruster.lifetime = 0.30
 	thruster.position = Vector3(0, 0.42, 0.42)
 	var pm := ParticleProcessMaterial.new()
 	pm.direction = Vector3(0, 0, 1)
 	pm.spread = 14.0
 	pm.initial_velocity_min = 0.8
-	pm.initial_velocity_max = 2.0
+	pm.initial_velocity_max = 1.8
 	pm.scale_min = 0.025
-	pm.scale_max = 0.07
-	pm.color = Color("#51dfff")
+	pm.scale_max = 0.06
+	pm.color = Color("#b18c59")
 	thruster.process_material = pm
 	var particle_mesh := SphereMesh.new()
-	particle_mesh.radius = 0.045
-	particle_mesh.height = 0.09
-	particle_mesh.material = _mat(Color("#51dfff"), 0.0, 0.1, Color("#51dfff"), 3.2)
+	particle_mesh.radius = 0.04
+	particle_mesh.height = 0.08
+	particle_mesh.material = _mat(Color("#b18c59"), 0.0, 0.16, Color("#b18c59"), 0.7)
 	thruster.draw_pass_1 = particle_mesh
 	thruster.emitting = true
 	add_child(thruster)
@@ -141,6 +170,7 @@ func _build_visual() -> void:
 	collider.position.y = 0.95
 	add_child(collider)
 
+
 func _build_leg(node_name: String, x: float) -> Node3D:
 	var leg := Node3D.new()
 	leg.name = node_name
@@ -148,18 +178,20 @@ func _build_leg(node_name: String, x: float) -> Node3D:
 	add_child(leg)
 	var mesh := MeshInstance3D.new()
 	var capsule := CapsuleMesh.new()
-	capsule.radius = 0.2
-	capsule.height = 1.0
-	capsule.material = _mat(Color("#1a3148"), 0.42, 0.3, Color("#31789b"), 0.7)
+	capsule.radius = 0.18
+	capsule.height = 1.02
+	capsule.material = _mat(Color("#292825"), 0.62, 0.40, Color("#6f5b43"), 0.08)
 	mesh.mesh = capsule
-	mesh.position.y = 0.0
 	leg.add_child(mesh)
 	var boot := MeshInstance3D.new()
-	var boot_mesh := BoxMesh.new()
-	boot_mesh.size = Vector3(0.42, 0.2, 0.62)
-	boot_mesh.material = _mat(Color("#0d1a2a"), 0.5, 0.24, Color("#42dcff"), 1.1)
+	var boot_mesh := CapsuleMesh.new()
+	boot_mesh.radius = 0.14
+	boot_mesh.height = 0.48
+	boot_mesh.material = _mat(Color("#171715"), 0.72, 0.34, Color("#8b7049"), 0.10)
 	boot.mesh = boot_mesh
-	boot.position = Vector3(0, -0.47, -0.13)
+	boot.scale = Vector3(1.15, 0.48, 1.65)
+	boot.rotation_degrees.x = 90.0
+	boot.position = Vector3(0, -0.47, -0.15)
 	leg.add_child(boot)
 	return leg
 

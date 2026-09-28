@@ -64,6 +64,11 @@ var joystick: Control
 var touch_layer: CanvasLayer
 var touch_root: Control
 var touch_controls: Array[Control] = []
+var camera_touch_pointer := -1
+var camera_touch_last := Vector2.ZERO
+var camera_yaw := 0.0
+var camera_pitch := -0.22
+const CAMERA_TOUCH_SENSITIVITY := 0.0085
 
 func _ready() -> void:
 	rng.randomize()
@@ -291,6 +296,8 @@ func _create_camera() -> void:
 	add_child(camera)
 	camera.global_position = Vector3(0, 9.0, 19.0)
 	camera.fov = 67.0
+	camera_yaw = 0.0
+	camera_pitch = -0.22
 	camera.look_at(Vector3(0, 1.0, 4.0), Vector3.UP)
 
 func _build_ui() -> void:
@@ -352,7 +359,7 @@ func _build_ui() -> void:
 	message_label.size = Vector2(640, 70)
 	layer.add_child(message_label)
 
-	pause_button = _button("Ⅱ", Vector2(70, 54), 22)
+	pause_button = _button("â¡", Vector2(70, 54), 22)
 	pause_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	pause_button.position = Vector2(-84, 54)
 	pause_button.z_index = 120
@@ -368,7 +375,7 @@ func _build_ui() -> void:
 	var title := _label("FRONTIER // ZERO", 58)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	menu_box.add_child(title)
-	var subtitle := _label("SINGLE-PLAYER 3D CAMPAIGN  •  3 SECTORS  •  SURVIVAL", 18)
+	var subtitle := _label("SINGLE-PLAYER 3D CAMPAIGN  â¢  3 SECTORS  â¢  SURVIVAL", 18)
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	menu_box.add_child(subtitle)
 	var best := _label("BEST SCORE  %06d" % best_score, 17)
@@ -385,7 +392,7 @@ func _build_ui() -> void:
 		var continue_button := _button("CONTINUE", Vector2(300, 56), 20)
 		continue_button.pressed.connect(func(): _begin_run(true))
 		menu_box.add_child(continue_button)
-	var info := _label("MOVE  •  FIRE  •  BOOST    |    AUTO-SAVE", 16)
+	var info := _label("MOVE  â¢  FIRE  â¢  BOOST    |    AUTO-SAVE", 16)
 	info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	menu_box.add_child(info)
 	layer.add_child(menu_panel)
@@ -432,14 +439,8 @@ func _create_touch_controls() -> void:
 
 	joystick = JOYSTICK_SCRIPT.new()
 	joystick.name = "MoveJoystick"
-	joystick.anchor_left = 0.0
-	joystick.anchor_right = 0.0
-	joystick.anchor_top = 1.0
-	joystick.anchor_bottom = 1.0
-	joystick.offset_left = 30.0
-	joystick.offset_right = 246.0
-	joystick.offset_top = -246.0
-	joystick.offset_bottom = -30.0
+	joystick.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	joystick.position = Vector2(32, 0)
 	joystick.size = Vector2(216, 216)
 	joystick.custom_minimum_size = Vector2(216, 216)
 	joystick.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -447,13 +448,15 @@ func _create_touch_controls() -> void:
 	touch_controls.append(joystick)
 
 	fire_button = _button("FIRE", Vector2(168, 104), 23)
-	_place_touch_button(fire_button, -210.0, -230.0, -38.0, -120.0)
+	fire_button.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	fire_button.size = Vector2(168, 104)
 	_configure_touch_button(fire_button, Color("#2c2926"), Color("#d1a66f"))
 	touch_root.add_child(fire_button)
 	touch_controls.append(fire_button)
 
 	boost_button = _button("BOOST", Vector2(168, 64), 18)
-	_place_touch_button(boost_button, -210.0, -112.0, -38.0, -44.0)
+	boost_button.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	boost_button.size = Vector2(168, 64)
 	_configure_touch_button(boost_button, Color("#242423"), Color("#8d8170"))
 	touch_root.add_child(boost_button)
 	touch_controls.append(boost_button)
@@ -461,7 +464,19 @@ func _create_touch_controls() -> void:
 	boost_button.pressed.connect(_boost_pressed)
 	fire_button.button_down.connect(func(): player.set_fire_input(true))
 	fire_button.button_up.connect(func(): player.set_fire_input(false))
+	get_viewport().size_changed.connect(_layout_touch_controls)
+	_layout_touch_controls()
 	_set_touch_controls_visible(false)
+
+
+func _layout_touch_controls() -> void:
+	if not joystick or not fire_button or not boost_button:
+		return
+	var viewport_size := get_viewport_rect().size
+	joystick.position = Vector2(32.0, max(24.0, viewport_size.y - 248.0))
+	fire_button.position = Vector2(max(24.0, viewport_size.x - 208.0), max(24.0, viewport_size.y - 228.0))
+	boost_button.position = Vector2(max(24.0, viewport_size.x - 208.0), max(24.0, viewport_size.y - 112.0))
+
 
 func _place_touch_button(button: Button, left: float, top: float, right: float, bottom: float) -> void:
 	button.anchor_left = 1.0
@@ -501,7 +516,7 @@ func _begin_run(continue_run: bool) -> void:
 	player.position = spawn_position
 	_clear_dynamic_entities()
 	_rebuild_stage(stage)
-	message_label.text = "STAGE %02d  •  DEPLOY" % stage
+	message_label.text = "STAGE %02d  â¢  DEPLOY" % stage
 	_play_sound("stage")
 	objective_label.text = _stage_objective()
 	_update_hud()
@@ -544,7 +559,7 @@ func _start_wave() -> void:
 	if stage == 3 and wave == 4:
 		_spawn_enemy("juggernaut", difficulty + 1.5, true)
 		final_boss_active = true
-		message_label.text = "WARDEN PRIME  •  BOSS"
+		message_label.text = "WARDEN PRIME  â¢  BOSS"
 		objective_label.text = "OBJECTIVE: DEFEAT THE WARDEN"
 	else:
 		for i in range(count):
@@ -692,7 +707,7 @@ func _complete_stage() -> void:
 		_win_game()
 		return
 	message_label.text = "STAGE %02d COMPLETE" % stage
-	objective_label.text = "AUTO-SAVING  •  NEXT SECTOR UNLOCKED"
+	objective_label.text = "AUTO-SAVING  â¢  NEXT SECTOR UNLOCKED"
 	_play_sound("stage")
 	var tween := create_tween()
 	tween.tween_interval(2.2)
@@ -724,7 +739,7 @@ func _on_enemy_defeated(enemy: Node3D, boss: bool) -> void:
 		score += reward
 		save_system.save_state(4, score, max(best_score, score))
 		message_label.text = "WARDEN PRIME DEFEATED"
-		objective_label.text = "OBJECTIVE COMPLETE  •  CAMPAIGN CLEAR"
+		objective_label.text = "OBJECTIVE COMPLETE  â¢  CAMPAIGN CLEAR"
 	else:
 		score += reward
 	_spawn_hit_fx(enemy.global_position + Vector3.UP * 0.7, Color("#a8745c") if not boss else Color("#d2bf98"), 2.8 if boss else 1.5)
@@ -742,7 +757,7 @@ func _win_game() -> void:
 	running = false
 	best_score = max(best_score, score)
 	save_system.save_state(4, score, best_score)
-	message_label.text = "CAMPAIGN COMPLETE  •  %06d" % score
+	message_label.text = "CAMPAIGN COMPLETE  â¢  %06d" % score
 	objective_label.text = "ALL 3 STAGES CLEARED"
 	for b in touch_controls:
 		b.hide()
@@ -764,8 +779,8 @@ func _on_player_died() -> void:
 	running = false
 	best_score = max(best_score, score)
 	save_system.save_state(stage, score, best_score)
-	message_label.text = "RUN ENDED  •  SCORE %06d" % score
-	objective_label.text = "PROGRESS SAVED  •  STAGE %02d" % stage
+	message_label.text = "RUN ENDED  â¢  SCORE %06d" % score
+	objective_label.text = "PROGRESS SAVED  â¢  STAGE %02d" % stage
 	for b in touch_controls:
 		b.hide()
 	pause_button.hide()
@@ -885,12 +900,44 @@ func _update_lod(delta: float) -> void:
 func _update_camera(delta: float) -> void:
 	if not player or not camera:
 		return
-	var look_dir := -player.global_transform.basis.z
-	var desired := player.global_position + Vector3(0, 7.8, 12.5)
-	var side_offset := look_dir.cross(Vector3.UP).normalized() * 2.2
-	desired += side_offset
-	camera.global_position = camera.global_position.lerp(desired, min(1.0, delta * 5.0))
-	camera.look_at(player.global_position + Vector3.UP * 0.95 - look_dir * 2.0, Vector3.UP)
+	var orbit_basis := Basis(Vector3.UP, camera_yaw)
+	var pitch_basis := Basis(Vector3.RIGHT, camera_pitch)
+	var offset := orbit_basis * (pitch_basis * Vector3(0.0, 7.8, 12.5))
+	var desired := player.global_position + offset
+	camera.global_position = camera.global_position.lerp(desired, min(1.0, delta * 7.0))
+	var target_offset := orbit_basis * Vector3(0.0, 0.7, -1.5)
+	camera.look_at(player.global_position + Vector3.UP * 1.0 + target_offset, Vector3.UP)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not running or game_over or get_tree().paused:
+		return
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			if camera_touch_pointer == -1 and _is_camera_touch_area(event.position):
+				camera_touch_pointer = event.index
+				camera_touch_last = event.position
+		else:
+			if event.index == camera_touch_pointer:
+				camera_touch_pointer = -1
+	elif event is InputEventScreenDrag and event.index == camera_touch_pointer:
+		var drag_delta := event.position - camera_touch_last
+		camera_touch_last = event.position
+		camera_yaw -= drag_delta.x * CAMERA_TOUCH_SENSITIVITY
+		camera_pitch = clamp(camera_pitch - drag_delta.y * CAMERA_TOUCH_SENSITIVITY * 0.72, -0.88, 0.36)
+
+
+func _is_camera_touch_area(position: Vector2) -> bool:
+	if joystick and joystick.get_global_rect().has_point(position):
+		return false
+	if fire_button and fire_button.get_global_rect().has_point(position):
+		return false
+	if boost_button and boost_button.get_global_rect().has_point(position):
+		return false
+	if pause_button and pause_button.visible and pause_button.get_global_rect().has_point(position):
+		return false
+	return true
+
 
 func _update_hud() -> void:
 	if not player:
@@ -902,7 +949,7 @@ func _update_hud() -> void:
 	if score_label:
 		score_label.text = "SCORE %06d" % score
 	if ammo_label:
-		ammo_label.text = "BLASTER  •  %.1fs" % player.fire_cooldown
+		ammo_label.text = "BLASTER  â¢  %.1fs" % player.fire_cooldown
 	if health_bar:
 		health_bar.value = player.health
 	if energy_bar:

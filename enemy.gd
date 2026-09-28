@@ -55,58 +55,123 @@ func _build_visual() -> void:
 	visual_root = Node3D.new()
 	visual_root.name = "Visual"
 	add_child(visual_root)
-	var tint := Color("#ff4d83")
+
+	var accent := Color("#a88452")
 	if enemy_type == "striker":
-		tint = Color("#b06aff")
+		accent = Color("#8e806d")
 	elif enemy_type == "juggernaut":
-		tint = Color("#ffb84a")
+		accent = Color("#b08b57")
 
-	var core := MeshInstance3D.new()
-	var mesh := SphereMesh.new()
-	mesh.radius = 0.6 if enemy_type != "juggernaut" else 0.85
-	mesh.height = 1.2 if enemy_type != "juggernaut" else 1.7
-	mesh.material = _mat(Color("#2b1727") if enemy_type != "juggernaut" else Color("#33220f"), 0.45, 0.18, tint, 2.5)
-	core.mesh = mesh
-	core.position.y = 0.85
-	visual_root.add_child(core)
+	var torso := MeshInstance3D.new()
+	var torso_mesh := CapsuleMesh.new()
+	torso_mesh.radius = 0.46 if enemy_type != "juggernaut" else 0.68
+	torso_mesh.height = 1.25 if enemy_type != "juggernaut" else 1.65
+	torso_mesh.material = _mat(Color("#302e2a"), 0.72, 0.36, accent, 0.16)
+	torso.mesh = torso_mesh
+	torso.scale = Vector3(1.0, 1.0, 0.74)
+	torso.position.y = 1.05
+	visual_root.add_child(torso)
 
-	var ring := MeshInstance3D.new()
-	var ring_mesh := TorusMesh.new()
-	ring_mesh.inner_radius = 0.67 if enemy_type != "juggernaut" else 0.9
-	ring_mesh.outer_radius = 0.76 if enemy_type != "juggernaut" else 1.02
-	ring_mesh.material = _mat(Color("#ffe1ea"), 0.12, 0.12, tint, 2.8)
-	ring.mesh = ring_mesh
-	ring.rotation_degrees.x = 90
-	ring.position.y = 0.85
-	visual_root.add_child(ring)
+	var chest_plate := MeshInstance3D.new()
+	var chest_mesh := CapsuleMesh.new()
+	chest_mesh.radius = 0.28 if not boss else 0.38
+	chest_mesh.height = 0.74 if not boss else 0.95
+	chest_mesh.material = _mat(Color("#1d1c1a"), 0.80, 0.28, accent, 0.24)
+	chest_plate.mesh = chest_mesh
+	chest_plate.scale = Vector3(1.0, 0.55, 0.70)
+	chest_plate.position = Vector3(0, 1.22, -0.35)
+	visual_root.add_child(chest_plate)
 
+	var head := MeshInstance3D.new()
+	var head_mesh := SphereMesh.new()
+	head_mesh.radius = 0.36 if not boss else 0.48
+	head_mesh.height = 0.68 if not boss else 0.88
+	head_mesh.material = _mat(Color("#3a3833"), 0.66, 0.32, accent, 0.14)
+	head.mesh = head_mesh
+	head.position.y = 2.02 if not boss else 2.52
+	visual_root.add_child(head)
+
+	var visor := MeshInstance3D.new()
+	var visor_mesh := CapsuleMesh.new()
+	visor_mesh.radius = 0.13 if not boss else 0.17
+	visor_mesh.height = 0.42 if not boss else 0.54
+	visor_mesh.material = _mat(Color("#151514"), 0.82, 0.16, accent, 0.28)
+	visor.mesh = visor_mesh
+	visor.rotation_degrees.z = 90.0
+	visor.scale = Vector3(1.0, 0.34, 0.42)
+	visor.position = Vector3(0, head.position.y, -0.31)
+	visual_root.add_child(visor)
+
+	var limb_scale := 1.0 if not boss else 1.18
 	for x in [-1.0, 1.0]:
-		var fin := MeshInstance3D.new()
-		var fin_mesh := BoxMesh.new()
-		fin_mesh.size = Vector3(0.18, 0.72, 0.62)
-		fin_mesh.material = _mat(Color("#34182a"), 0.36, 0.22, tint, 1.4)
-		fin.mesh = fin_mesh
-		fin.position = Vector3(x * (0.68 if enemy_type != "juggernaut" else 0.94), 0.72, 0)
-		fin.rotation_degrees.z = x * 18.0
-		visual_root.add_child(fin)
+		var shoulder := MeshInstance3D.new()
+		var shoulder_mesh := SphereMesh.new()
+		shoulder_mesh.radius = 0.22 * limb_scale
+		shoulder_mesh.height = 0.42 * limb_scale
+		shoulder_mesh.material = _mat(Color("#3a3731"), 0.70, 0.34, accent, 0.12)
+		shoulder.mesh = shoulder_mesh
+		shoulder.position = Vector3(x * 0.66 * limb_scale, 1.42 * limb_scale, 0)
+		visual_root.add_child(shoulder)
+
+		var arm := MeshInstance3D.new()
+		var arm_mesh := CapsuleMesh.new()
+		arm_mesh.radius = 0.15 * limb_scale
+		arm_mesh.height = 0.88 * limb_scale
+		arm_mesh.material = _mat(Color("#292724"), 0.62, 0.42, accent, 0.10)
+		arm.mesh = arm_mesh
+		arm.position = Vector3(x * 0.72 * limb_scale, 0.96 * limb_scale, 0)
+		arm.rotation_degrees.z = x * -8.0
+		visual_root.add_child(arm)
+
+		var leg := MeshInstance3D.new()
+		var leg_mesh := CapsuleMesh.new()
+		leg_mesh.radius = 0.18 * limb_scale
+		leg_mesh.height = 1.0 * limb_scale
+		leg_mesh.material = _mat(Color("#252421"), 0.62, 0.44, accent, 0.08)
+		leg.mesh = leg_mesh
+		leg.position = Vector3(x * 0.28 * limb_scale, 0.44 * limb_scale, 0)
+		visual_root.add_child(leg)
+
+		var boot := MeshInstance3D.new()
+		var boot_mesh := CapsuleMesh.new()
+		boot_mesh.radius = 0.14 * limb_scale
+		boot_mesh.height = 0.46 * limb_scale
+		boot_mesh.material = _mat(Color("#171715"), 0.72, 0.38, accent, 0.10)
+		boot.mesh = boot_mesh
+		boot.scale = Vector3(1.12, 0.46, 1.55)
+		boot.rotation_degrees.x = 90.0
+		boot.position = Vector3(x * 0.28 * limb_scale, -0.03, -0.14)
+		visual_root.add_child(boot)
+
+	var weapon := MeshInstance3D.new()
+	var weapon_mesh := CylinderMesh.new()
+	weapon_mesh.top_radius = 0.07 * limb_scale
+	weapon_mesh.bottom_radius = 0.11 * limb_scale
+	weapon_mesh.height = 0.62 * limb_scale
+	weapon_mesh.material = _mat(Color("#161614"), 0.80, 0.30, accent, 0.22)
+	weapon.mesh = weapon_mesh
+	weapon.rotation_degrees.x = 90.0
+	weapon.position = Vector3(0, 1.02 * limb_scale, -0.58 * limb_scale)
+	visual_root.add_child(weapon)
 
 	var collider := CollisionShape3D.new()
-	var shape := SphereShape3D.new()
-	shape.radius = 0.8 if enemy_type != "juggernaut" else 1.15
+	var shape := CapsuleShape3D.new()
+	shape.radius = 0.80 if enemy_type != "juggernaut" else 1.15
+	shape.height = 1.9 if enemy_type != "juggernaut" else 2.7
 	collider.shape = shape
-	collider.position.y = 0.8
+	collider.position.y = 0.95
 	add_child(collider)
 
 	if boss:
-		var core_ring := MeshInstance3D.new()
-		var core_mesh := TorusMesh.new()
-		core_mesh.inner_radius = 1.2
-		core_mesh.outer_radius = 1.34
-		core_mesh.material = _mat(Color("#fff0c7"), 0.2, 0.14, Color("#ffd363"), 4.0)
-		core_ring.mesh = core_mesh
-		core_ring.position.y = 1.0
-		core_ring.rotation_degrees.x = 90
-		add_child(core_ring)
+		var boss_ring := MeshInstance3D.new()
+		var boss_ring_mesh := TorusMesh.new()
+		boss_ring_mesh.inner_radius = 1.08
+		boss_ring_mesh.outer_radius = 1.20
+		boss_ring_mesh.material = _mat(Color("#7d684d"), 0.40, 0.28, accent, 0.50)
+		boss_ring.mesh = boss_ring_mesh
+		boss_ring.position.y = 2.35
+		visual_root.add_child(boss_ring)
+
 
 func _physics_process(delta: float) -> void:
 	if get_tree().paused or target == null:
