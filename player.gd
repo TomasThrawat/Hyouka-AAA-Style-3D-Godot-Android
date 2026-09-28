@@ -56,7 +56,7 @@ func _build_visual() -> void:
 	add_child(collider)
 
 
-(delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	if get_tree().paused:
 		return
 	anim_time += delta
