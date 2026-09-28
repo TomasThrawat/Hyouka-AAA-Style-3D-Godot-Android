@@ -63,7 +63,7 @@ func _run() -> void:
 	game.fire_button.button_up.emit()
 	_check(game.projectiles.size() > 0, "FIRE button spawns projectile")
 
-	var energy_before := game.player.energy
+	var energy_before: float = game.player.energy
 	game.boost_button.pressed.emit()
 	_check(game.player.boost_time > 0.0, "BOOST button activates")
 	_check(game.player.energy < energy_before, "BOOST consumes energy")
