@@ -152,8 +152,8 @@ func _juggernaut_ai(direction: Vector3, distance: float) -> void:
 		var spread_values := [-0.18, 0.0, 0.18]
 		if enraged:
 			spread_values = [-0.30, -0.15, 0.0, 0.15, 0.30]
-		for spread in spread_values:
-			var attack_dir := direction.rotated(Vector3.UP, spread)
+		for spread_value in spread_values:
+			var attack_dir := direction.rotated(Vector3.UP, float(spread_value))
 			attack_requested.emit(attack_origin, attack_dir, ranged_damage + (7.0 if enraged else 5.0))
 		attack_cooldown = 1.8 if enraged else 2.6
 

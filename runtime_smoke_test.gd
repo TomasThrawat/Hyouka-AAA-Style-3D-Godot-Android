@@ -28,6 +28,8 @@ func _run() -> void:
 	_check(game.tactical_button != null, "tactical button exists")
 	_check(game.shield_button != null, "shield button exists")
 	_check(game.pause_button != null, "pause button exists")
+	_check(game.fire_button.text.find("FIRE") >= 0, "FIRE button label")
+	_check(game.boost_button.text.find("BOOST") >= 0, "BOOST button label")
 	_check(game.map_buttons.size() == 3, "three map buttons exist")
 
 	for i in range(game.map_buttons.size()):
@@ -71,6 +73,8 @@ func _run() -> void:
 	_check(game.player.tactical_cooldown > 0.0, "TACTICAL button activates")
 	_check(game.player.energy < energy_before, "TACTICAL consumes energy")
 
+	game.player.energy = game.player.max_energy
+	game.player.energy_changed.emit(game.player.energy)
 	energy_before = game.player.energy
 	game.shield_button.pressed.emit()
 	_check(game.player.shield_time > 0.0, "SHIELD button activates")

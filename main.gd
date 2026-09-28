@@ -517,7 +517,7 @@ func _build_ui() -> void:
 	boss_bar.max_value = 100.0
 	boss_bar.value = 0.0
 	boss_bar.show_percentage = false
-	boss_bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	boss_bar.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	boss_bar.position = Vector2(280, 145)
 	boss_bar.size = Vector2(720, 24)
 	boss_bar.hide()
