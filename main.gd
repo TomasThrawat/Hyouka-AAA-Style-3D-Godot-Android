@@ -5,6 +5,7 @@ const ENEMY_SCRIPT = preload("res://enemy.gd")
 const PROJECTILE_SCRIPT = preload("res://projectile.gd")
 const SAVE_SCRIPT = preload("res://save_system.gd")
 const AUDIO_SCRIPT = preload("res://audio_manager.gd")
+const JOYSTICK_SCRIPT = preload("res://joystick.gd")
 
 var player: CharacterBody3D
 var camera: Camera3D
@@ -35,6 +36,8 @@ var profile_timer := 0.0
 var fps_value := 0.0
 var auto_quality_timer := 0.0
 var lod_timer := 0.0
+var hud_timer := 0.0
+const MAX_PROJECTILES := 12
 var spawn_position := Vector3.ZERO
 
 var running := false
@@ -57,15 +60,13 @@ var pause_panel: PanelContainer
 var pause_button: Button
 var fire_button: Button
 var boost_button: Button
-var left_button: Button
-var right_button: Button
-var up_button: Button
-var down_button: Button
-var touch_buttons: Array[Button] = []
+var joystick: Control
+var touch_controls: Array[Control] = []
 
 func _ready() -> void:
 	rng.randomize()
-	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	Engine.max_fps = 60
+	call_deferred("_force_android_fullscreen")
 	get_viewport().set_embedding_subwindows(false)
 	save_system = SAVE_SCRIPT.new()
 	add_child(save_system)
@@ -81,8 +82,13 @@ func _ready() -> void:
 	_build_ui()
 	_show_menu()
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_WINDOW_FOCUS_IN:
+		call_deferred("_force_android_fullscreen")
+
 func _process(delta: float) -> void:
 	elapsed += delta
+	hud_timer -= delta
 	_profile_performance(delta)
 	_update_lod(delta)
 	if running and not game_over and not get_tree().paused:
@@ -98,7 +104,9 @@ func _process(delta: float) -> void:
 			_spawn_pickup()
 			pickup_timer = rng.randf_range(4.0, 7.0)
 		_check_stage_completion()
-	_update_hud()
+	if hud_timer <= 0.0:
+		hud_timer = 0.10
+		_update_hud()
 
 func _build_environment() -> void:
 	world_environment = WorldEnvironment.new()
@@ -106,10 +114,10 @@ func _build_environment() -> void:
 	environment.background_mode = Environment.BG_COLOR
 	environment.background_color = Color("#03050d")
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_color = Color("#6074a8")
-	environment.ambient_light_energy = 0.72
+	environment.ambient_light_color = Color("#526b92")
+	environment.ambient_light_energy = 0.82
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	environment.tonemap_exposure = 1.15
+	environment.tonemap_exposure = 1.05
 	world_environment.environment = environment
 	add_child(world_environment)
 
@@ -117,24 +125,12 @@ func _build_environment() -> void:
 	sun.name = "KeyLight"
 	sun.rotation_degrees = Vector3(-53.0, -31.0, 0.0)
 	sun.light_color = Color("#c5d9ff")
-	sun.light_energy = 1.55
-	sun.shadow_enabled = true
-	sun.directional_shadow_max_distance = 75.0
+	sun.light_energy = 1.1
+	sun.shadow_enabled = false
 	add_child(sun)
 	dynamic_lights.append(sun)
-
-	for data in [
-		[Vector3(0, 8, 0), Color("#27d8ff"), 2.6, 34.0],
-		[Vector3(28, 5, -24), Color("#6b55ff"), 3.0, 24.0],
-		[Vector3(-28, 5, 22), Color("#ff3d89"), 2.7, 24.0]
-	]:
-		var fill := OmniLight3D.new()
-		fill.position = data[0]
-		fill.light_color = data[1]
-		fill.light_energy = data[2]
-		fill.omni_range = data[3]
-		add_child(fill)
-		dynamic_lights.append(fill)
+	if DisplayServer.is_touchscreen_available():
+		DisplayServer.screen_set_keep_on(true)
 
 func _build_arena() -> void:
 	arena_root = Node3D.new()
@@ -180,7 +176,7 @@ func _build_sector_geometry() -> void:
 		_create_wall(Vector3(side * arena_size * 0.5, 2.6, 0.0), Vector3(0.8, 5.2, arena_size))
 		_create_wall(Vector3(0.0, 2.6, side * arena_size * 0.5), Vector3(arena_size, 5.2, 0.8))
 
-	for i in range(34):
+	for i in range(18):
 		var angle := float(i) * TAU / 34.0 + rng.randf_range(-0.06, 0.06)
 		var distance := rng.randf_range(10.5, 31.0)
 		var p := Vector3(cos(angle) * distance, 0.0, sin(angle) * distance)
@@ -188,7 +184,7 @@ func _build_sector_geometry() -> void:
 			continue
 		_create_obstacle(p, rng.randf_range(0.8, 2.4), rng.randf_range(1.8, 6.5), i % 3 == 0)
 
-	for i in range(78):
+	for i in range(28):
 		var angle := rng.randf_range(0.0, TAU)
 		var distance := rng.randf_range(8.0, 35.0)
 		_create_neon_marker(Vector3(cos(angle) * distance, 0.025, sin(angle) * distance))
@@ -255,7 +251,7 @@ func _build_landmarks() -> void:
 		var tower := Node3D.new()
 		tower.position = Vector3(side * 27.0, 0.0, -27.0)
 		arena_root.add_child(tower)
-		for j in range(4):
+		for j in range(3):
 			var beam := MeshInstance3D.new()
 			var box := BoxMesh.new()
 			box.size = Vector3(0.42, 9.0, 0.42)
@@ -264,13 +260,6 @@ func _build_landmarks() -> void:
 			beam.position = Vector3((j - 1.5) * 2.2, 4.5, 0)
 			tower.add_child(beam)
 			lod_nodes.append(beam)
-		var cap := OmniLight3D.new()
-		cap.position = Vector3(0, 9.0, 0)
-		cap.light_color = Color("#7d62ff")
-		cap.light_energy = 3.5
-		cap.omni_range = 11.0
-		tower.add_child(cap)
-		dynamic_lights.append(cap)
 
 func _build_stage_gate() -> void:
 	var gate := MeshInstance3D.new()
@@ -424,40 +413,31 @@ func _build_ui() -> void:
 	_create_touch_controls(layer)
 
 func _create_touch_controls(layer: CanvasLayer) -> void:
-	left_button = _button("◀", Vector2(76, 76), 24)
-	right_button = _button("▶", Vector2(76, 76), 24)
-	up_button = _button("▲", Vector2(76, 76), 24)
-	down_button = _button("▼", Vector2(76, 76), 24)
-	fire_button = _button("FIRE", Vector2(118, 92), 21)
-	boost_button = _button("BOOST", Vector2(118, 68), 18)
+	joystick = JOYSTICK_SCRIPT.new()
+	joystick.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	joystick.position = Vector2(24, -236)
+	joystick.custom_minimum_size = Vector2(210, 210)
+	joystick.size = joystick.custom_minimum_size
+	joystick.value_changed.connect(func(value: Vector2): player.set_move_input(value))
+	joystick.released.connect(func(): player.clear_move_input())
+	layer.add_child(joystick)
+	touch_controls.append(joystick)
 
-	left_button.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	right_button.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	up_button.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	down_button.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	boost_button = _button("BOOST", Vector2(132, 62), 17)
+	fire_button = _button("FIRE", Vector2(132, 96), 22)
 	boost_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	fire_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	boost_button.position = Vector2(-158, -98)
+	fire_button.position = Vector2(-158, -214)
+	layer.add_child(boost_button)
+	layer.add_child(fire_button)
+	touch_controls.append(boost_button)
+	touch_controls.append(fire_button)
 
-	left_button.position = Vector2(26, -124)
-	down_button.position = Vector2(112, -38)
-	up_button.position = Vector2(112, -210)
-	right_button.position = Vector2(198, -124)
-	boost_button.position = Vector2(-142, -116)
-	fire_button.position = Vector2(-145, -220)
-
-	for b in [left_button, down_button, up_button, right_button, boost_button, fire_button]:
-		layer.add_child(b)
-		touch_buttons.append(b)
-
-	left_button.button_down.connect(func(): player.set_move_input(Vector2(-1, 0)))
-	right_button.button_down.connect(func(): player.set_move_input(Vector2(1, 0)))
-	up_button.button_down.connect(func(): player.set_move_input(Vector2(0, -1)))
-	down_button.button_down.connect(func(): player.set_move_input(Vector2(0, 1)))
-	for b in [left_button, right_button, up_button, down_button]:
-		b.button_up.connect(func(): player.clear_move_input())
 	boost_button.pressed.connect(_boost_pressed)
 	fire_button.button_down.connect(func(): player.set_fire_input(true))
 	fire_button.button_up.connect(func(): player.set_fire_input(false))
+	_set_touch_controls_visible(DisplayServer.is_touchscreen_available() or OS.get_name() == "Android")
 
 func _begin_run(continue_run: bool) -> void:
 	if continue_run:
@@ -495,7 +475,7 @@ func _show_menu() -> void:
 	pause_panel.hide()
 	menu_panel.show()
 	pause_button.hide()
-	for b in touch_buttons:
+	for b in touch_controls:
 		b.hide()
 	message_label.text = ""
 	objective_label.text = ""
@@ -573,6 +553,10 @@ func _on_player_fire(origin: Vector3, direction: Vector3, damage: float) -> void
 	_play_sound("shoot")
 
 func _spawn_projectile(origin: Vector3, direction: Vector3, friendly: bool, damage: float, speed: float, lifetime: float, color: Color) -> void:
+	if projectiles.size() >= MAX_PROJECTILES:
+		var oldest: Node3D = projectiles.pop_front()
+		if is_instance_valid(oldest):
+			oldest.queue_free()
 	var shot: Node3D = PROJECTILE_SCRIPT.new()
 	shot.position = origin
 	add_child(shot)
@@ -634,11 +618,6 @@ func _spawn_pickup() -> void:
 	ring.mesh = torus
 	ring.rotation_degrees.x = 90
 	orb.add_child(ring)
-	var light := OmniLight3D.new()
-	light.light_color = Color("#2effd1")
-	light.light_energy = 2.4 if quality_level >= 1 else 1.2
-	light.omni_range = 4.2
-	orb.add_child(light)
 	orb.position = Vector3(rng.randf_range(-27.0, 27.0), 0.8, rng.randf_range(-27.0, 27.0))
 	add_child(orb)
 	pickups.append(orb)
@@ -729,7 +708,7 @@ func _win_game() -> void:
 	save_system.save_state(4, score, best_score)
 	message_label.text = "CAMPAIGN COMPLETE  •  %06d" % score
 	objective_label.text = "ALL 3 STAGES CLEARED"
-	for b in touch_buttons:
+	for b in touch_controls:
 		b.hide()
 	pause_button.hide()
 	_play_sound("stage")
@@ -751,7 +730,7 @@ func _on_player_died() -> void:
 	save_system.save_state(stage, score, best_score)
 	message_label.text = "RUN ENDED  •  SCORE %06d" % score
 	objective_label.text = "PROGRESS SAVED  •  STAGE %02d" % stage
-	for b in touch_buttons:
+	for b in touch_controls:
 		b.hide()
 	pause_button.hide()
 	_play_sound("hurt")
@@ -800,7 +779,7 @@ func _spawn_hit_fx(pos: Vector3, color: Color, scale_value: float) -> void:
 		return
 	var fx := GPUParticles3D.new()
 	fx.one_shot = true
-	fx.amount = int(12 + 10 * scale_value) if quality_level >= 2 else int(8 + 6 * scale_value)
+	fx.amount = int(7 + 5 * scale_value) if quality_level >= 2 else int(5 + 3 * scale_value)
 	fx.lifetime = 0.34 + scale_value * 0.06
 	fx.explosiveness = 1.0
 	fx.position = pos
@@ -847,14 +826,13 @@ func _profile_performance(delta: float) -> void:
 			_apply_quality()
 
 func _apply_quality() -> void:
+	# Mobile profile: keep realtime shadow/light work disabled.
 	for light in dynamic_lights:
 		if is_instance_valid(light):
-			light.shadow_enabled = quality_level >= 2
-			if light is OmniLight3D:
-				light.light_energy *= 0.82 if quality_level == 0 else 1.0
+			light.shadow_enabled = false
 	for fx in particle_nodes:
 		if is_instance_valid(fx):
-			fx.amount = max(6, int(float(fx.amount) * (0.65 if quality_level == 0 else 1.0)))
+			fx.amount = max(4, int(float(fx.amount) * 0.8))
 
 func _update_lod(delta: float) -> void:
 	lod_timer += delta
@@ -895,12 +873,25 @@ func _update_hud() -> void:
 	if pause_button:
 		pause_button.visible = running and not game_over
 	if running and not game_over and not get_tree().paused:
-		for b in touch_buttons:
+		for b in touch_controls:
 			b.show()
 
 func _play_sound(kind: String) -> void:
 	if is_instance_valid(audio_manager) and audio_manager.has_method("play_sound"):
 		audio_manager.play_sound(kind)
+
+func _force_android_fullscreen() -> void:
+	if OS.get_name() == "Android":
+		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_LANDSCAPE)
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+		DisplayServer.screen_set_keep_on(true)
+	else:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+
+func _set_touch_controls_visible(visible_value: bool) -> void:
+	for control in touch_controls:
+		if is_instance_valid(control):
+			control.visible = visible_value
 
 func _label(text_value: String, font_size: int) -> Label:
 	var label := Label.new()

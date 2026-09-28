@@ -6,15 +6,19 @@ config/icon="res://icon.svg"
 config/name="Hyouka: Neon Frontier"
 run/main_scene="res://Main.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
-config/version="2.0.0"
+config/version="2.1.0"
+run/max_fps=60
 
 [display]
-window/size/viewport_width=1920
-window/size/viewport_height=1080
-window/size/window_width_override=1920
-window/size/window_height_override=1080
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/size/window_width_override=0
+window/size/window_height_override=0
 window/size/mode=3
 window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=0
+window/energy_saving/keep_screen_on=true
 
 [rendering]
 textures/vram_compression/import_etc2_astc=true
@@ -28,3 +32,6 @@ common/enable_pause_aware_picking=true
 
 [gui]
 theme/default_font_multichannel_signed_distance_field=true
+
+[input_devices]
+pointing/emulate_touch_from_mouse=true

@@ -12,6 +12,9 @@ var touch_damage := 8.0
 var ranged_damage := 9.0
 var attack_cooldown := 0.0
 var phase := 0.0
+var ai_timer := 0.0
+var cached_direction := Vector3.FORWARD
+var cached_distance := 999.0
 var boss := false
 var visual_root: Node3D
 
@@ -44,8 +47,8 @@ func setup(target_node: Node3D, difficulty: float, kind: String, is_boss: bool) 
 	else:
 		scale = Vector3.ONE * (0.9 + difficulty * 0.035)
 	health = max_health
-	collision_layer = 2
-	collision_mask = 1
+	collision_layer = 0
+	collision_mask = 0
 	_build_visual()
 
 func _build_visual() -> void:
@@ -87,13 +90,6 @@ func _build_visual() -> void:
 		fin.rotation_degrees.z = x * 18.0
 		visual_root.add_child(fin)
 
-	var eye := OmniLight3D.new()
-	eye.light_color = tint
-	eye.light_energy = 3.2 if enemy_type != "juggernaut" else 4.5
-	eye.omni_range = 5.0 if enemy_type != "juggernaut" else 8.0
-	eye.position = Vector3(0, 0.85, -0.2)
-	visual_root.add_child(eye)
-
 	var collider := CollisionShape3D.new()
 	var shape := SphereShape3D.new()
 	shape.radius = 0.8 if enemy_type != "juggernaut" else 1.15
@@ -117,24 +113,24 @@ func _physics_process(delta: float) -> void:
 		return
 	phase += delta
 	attack_cooldown = max(0.0, attack_cooldown - delta)
-	var distance := global_position.distance_to(target.global_position)
-	if distance > 62.0:
-		velocity = Vector3.ZERO
-		return
-
-	var flat_target := target.global_position
-	flat_target.y = global_position.y
-	var direction := (flat_target - global_position).normalized()
-
-	if enemy_type == "striker":
-		_striker_ai(direction, distance)
-	elif enemy_type == "juggernaut":
-		_juggernaut_ai(direction, distance)
-	else:
-		_drone_ai(direction, distance)
-
+	ai_timer -= delta
+	if ai_timer <= 0.0:
+		ai_timer = 0.10
+		cached_distance = global_position.distance_to(target.global_position)
+		if cached_distance > 62.0:
+			velocity = Vector3.ZERO
+			return
+		var flat_target := target.global_position
+		flat_target.y = global_position.y
+		cached_direction = (flat_target - global_position).normalized()
+		if enemy_type == "striker":
+			_striker_ai(cached_direction, cached_distance)
+		elif enemy_type == "juggernaut":
+			_juggernaut_ai(cached_direction, cached_distance)
+		else:
+			_drone_ai(cached_direction, cached_distance)
 	move_and_slide()
-	_update_animation(delta, direction)
+	_update_animation(delta, cached_direction)
 
 func _drone_ai(direction: Vector3, distance: float) -> void:
 	if distance > 2.2:

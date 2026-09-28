@@ -102,11 +102,6 @@ func _build_visual() -> void:
 	barrel.rotation_degrees.x = 90
 	barrel.position.z = -0.34
 	weapon.add_child(barrel)
-	weapon_flash = OmniLight3D.new()
-	weapon_flash.light_color = Color("#61efff")
-	weapon_flash.light_energy = 0.0
-	weapon_flash.omni_range = 3.5
-	weapon.add_child(weapon_flash)
 
 	var pack := MeshInstance3D.new()
 	var pack_mesh := BoxMesh.new()
@@ -118,8 +113,8 @@ func _build_visual() -> void:
 
 	var thruster := GPUParticles3D.new()
 	thruster.name = "Thruster"
-	thruster.amount = 28
-	thruster.lifetime = 0.45
+	thruster.amount = 8
+	thruster.lifetime = 0.28
 	thruster.position = Vector3(0, 0.42, 0.42)
 	var pm := ParticleProcessMaterial.new()
 	pm.direction = Vector3(0, 0, 1)
@@ -212,8 +207,6 @@ func _update_animation(delta: float) -> void:
 		head.rotation.z = sin(anim_time * 2.3) * 0.018
 	if weapon:
 		weapon.rotation.x = lerp(weapon.rotation.x, -0.04 if movement < 0.2 else -0.08, min(1.0, delta * 8.0))
-	if weapon_flash:
-		weapon_flash.light_energy = max(0.0, weapon_flash.light_energy - delta * 35.0)
 
 func shoot() -> void:
 	if fire_cooldown > 0.0 or get_tree().paused or health <= 0.0:
@@ -221,8 +214,6 @@ func shoot() -> void:
 	fire_cooldown = fire_rate
 	var direction := -global_transform.basis.z
 	var origin := global_position + Vector3.UP * 1.3 + direction * 0.95
-	if weapon_flash:
-		weapon_flash.light_energy = 4.8
 	fire_requested.emit(origin, direction, shot_damage)
 
 func boost() -> void:
