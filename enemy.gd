@@ -52,7 +52,7 @@ func setup(target_node: Node3D, difficulty: float, kind: String, is_boss: bool) 
 	_build_visual()
 
 func _build_visual() -> void:
-	var resource: Resource = load("res://assets/worker_human.obj")
+	var resource: Resource = preload("res://assets/worker_human.glb")
 	if not resource is Mesh:
 		return
 	var model := MeshInstance3D.new()

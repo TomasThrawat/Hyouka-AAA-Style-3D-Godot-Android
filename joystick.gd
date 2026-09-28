@@ -38,32 +38,31 @@ func _draw() -> void:
 	draw_circle(knob_center, knob_radius, Color(0.69, 0.58, 0.40, 0.99))
 	draw_circle(knob_center - Vector2(9, 9), knob_radius * 0.27, Color(0.96, 0.94, 0.88, 0.94))
 
-func _input(event: InputEvent) -> void:
+func _gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
-		if event.pressed and active_pointer == -1 and get_global_rect().has_point(event.position):
+		if event.pressed and active_pointer == -1:
 			active_pointer = event.index
-			_set_value_from_screen(event.position)
+			_set_value_from_local(event.position)
 			accept_event()
 		elif not event.pressed and event.index == active_pointer:
 			_reset_stick()
 			accept_event()
 	elif event is InputEventScreenDrag and event.index == active_pointer:
-		_set_value_from_screen(event.position)
+		_set_value_from_local(event.position)
 		accept_event()
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		if event.pressed and not mouse_active and get_global_rect().has_point(event.position):
+		if event.pressed and not mouse_active:
 			mouse_active = true
-			_set_value_from_screen(event.position)
+			_set_value_from_local(event.position)
 			accept_event()
 		elif not event.pressed and mouse_active:
-			mouse_active = false
 			_reset_stick()
 			accept_event()
 	elif event is InputEventMouseMotion and mouse_active:
-		_set_value_from_screen(event.position)
+		_set_value_from_local(event.position)
 		accept_event()
 
-func _set_value_from_screen(screen_position: Vector2) -> void:
+func _set_value_from_local(local: Vector2) -> void:(screen_position: Vector2) -> void:
 	var local := get_global_transform().affine_inverse() * screen_position
 	var center := size * 0.5
 	var offset := local - center
