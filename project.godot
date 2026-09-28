@@ -1,0 +1,27 @@
+; Engine configuration file.
+config_version=5
+
+[application]
+config/name="Hyouka: Neon Frontier"
+run/main_scene="res://Main.tscn"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+config/version="1.0.0"
+
+[display]
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/size/window_width_override=1280
+window/size/window_height_override=720
+window/stretch/mode="canvas_items"
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/default_filters/use_nearest_mipmap_filter=false
+environment/defaults/default_clear_color=Color(0.008, 0.012, 0.025, 1)
+
+[physics]
+common/enable_pause_aware_picking=true
+
+[gui]
+theme/default_font_multichannel_signed_distance_field=true
