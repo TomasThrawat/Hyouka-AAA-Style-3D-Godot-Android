@@ -24,6 +24,10 @@ var message_label: Label
 var menu_panel: PanelContainer
 var pause_button: Button
 var boost_button: Button
+var left_button: Button
+var right_button: Button
+var up_button: Button
+var down_button: Button
 var touch_buttons: Array[Button] = []
 
 func _ready() -> void:
@@ -323,7 +327,7 @@ func _show_menu() -> void:
 func _start_wave() -> void:
 	wave += 1
 	wave_timer = 20.0
-	var count := min(18, 3 + wave * 2)
+	var count: int = int(min(18, 3 + wave * 2))
 	for i in range(count):
 		_spawn_hazard(1.0 + wave * 0.3)
 	message_label.text = "WAVE %d" % wave
@@ -332,7 +336,7 @@ func _start_wave() -> void:
 	tween.tween_callback(func(): if running and not game_over: message_label.text = "")
 
 func _spawn_hazard(difficulty: float) -> void:
-	var drone := HAZARD_SCRIPT.new()
+	var drone: CharacterBody3D = HAZARD_SCRIPT.new()
 	var angle := rng.randf_range(0.0, TAU)
 	var distance := rng.randf_range(15.0, 19.0)
 	drone.position = Vector3(cos(angle) * distance, 0.1, sin(angle) * distance)
