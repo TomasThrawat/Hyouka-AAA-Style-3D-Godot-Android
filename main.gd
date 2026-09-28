@@ -45,6 +45,16 @@ var game_over := false
 var final_boss_active := false
 var transition_lock := false
 var quality_level := 2
+var selected_map := 0
+var map_buttons: Array[Button] = []
+var map_info_label: Label
+
+const MAP_NAMES := ["NEON DISTRICT", "DUST BASIN", "FROZEN RELAY"]
+const MAP_DESCRIPTIONS := [
+    "Dense ruins, ring towers and tight combat lanes.",
+    "Open desert basin with staggered rock formations.",
+    "Cold relay field with grid walls and clear sightlines."
+]
 
 var score_label: Label
 var wave_label: Label
@@ -146,12 +156,53 @@ func _build_arena() -> void:
 	arena_root.name = "World"
 	add_child(arena_root)
 	spawn_position = Vector3(0, 0.1, 15)
-	_build_sector_geometry()
-	_build_landmarks()
+	_build_sector_geometry(selected_map)
+	_build_landmarks(selected_map)
 	_build_stage_gate()
 
-func _build_sector_geometry() -> void:
+
+func _rebuild_selected_map() -> void:
+	if not arena_root:
+		return
+	for child in arena_root.get_children():
+		if is_instance_valid(child):
+			child.free()
+	lod_nodes.clear()
+	spawn_position = Vector3(0, 0.1, 15)
+	_build_sector_geometry(selected_map)
+	_build_landmarks(selected_map)
+	_build_stage_gate()
+	if player:
+		player.position = spawn_position
+	if camera:
+		camera.global_position = Vector3(0, 7.8, 23.0)
+		camera.look_at(Vector3(0, 1.0, 5.0), Vector3.UP)
+
+
+func _select_map(index: int) -> void:
+	if running or game_over:
+		return
+	selected_map = clamp(index, 0, MAP_NAMES.size() - 1)
+	if map_info_label:
+		map_info_label.text = MAP_DESCRIPTIONS[selected_map]
+	for i in range(map_buttons.size()):
+		var prefix := "[SELECTED] " if i == selected_map else ""
+		map_buttons[i].text = prefix + MAP_NAMES[i]
+	_rebuild_selected_map()
+
+func _build_sector_geometry(map_id: int = 0) -> void:
 	var arena_size := 76.0
+	var floor_color := Color("#17131a")
+	var outline_color := Color("#2d2634")
+	var marker_color := Color("#66d8ff")
+	if map_id == 1:
+		floor_color = Color("#21170f")
+		outline_color = Color("#3b2a1d")
+		marker_color = Color("#ffad62")
+	elif map_id == 2:
+		floor_color = Color("#111c25")
+		outline_color = Color("#1b3040")
+		marker_color = Color("#72b8ff")
 	var ground := StaticBody3D.new()
 	ground.name = "Ground"
 	arena_root.add_child(ground)
@@ -160,7 +211,7 @@ func _build_sector_geometry() -> void:
 	floor_mesh.name = "Floor"
 	var floor_box := BoxMesh.new()
 	floor_box.size = Vector3(arena_size, 0.8, arena_size)
-	floor_box.material = _mat(Color("#1b1511"), 0.0, 0.94, Color("#0d0907"), 0.08)
+	floor_box.material = _mat(floor_color, 0.0, 0.94, floor_color, 0.10)
 	floor_mesh.mesh = floor_box
 	floor_mesh.position.y = -0.4
 	ground.add_child(floor_mesh)
@@ -169,7 +220,7 @@ func _build_sector_geometry() -> void:
 	var floor_outline := MeshInstance3D.new()
 	var outline_box := BoxMesh.new()
 	outline_box.size = Vector3(arena_size - 2.0, 0.05, arena_size - 2.0)
-	outline_box.material = _mat(Color("#28221b"), 0.05, 0.26, Color("#6f5a3f"), 0.34)
+	outline_box.material = _mat(outline_color, 0.05, 0.26, marker_color, 0.34)
 	floor_outline.mesh = outline_box
 	floor_outline.position.y = 0.015
 	arena_root.add_child(floor_outline)
@@ -185,18 +236,45 @@ func _build_sector_geometry() -> void:
 		_create_wall(Vector3(side * arena_size * 0.5, 2.6, 0.0), Vector3(0.8, 5.2, arena_size))
 		_create_wall(Vector3(0.0, 2.6, side * arena_size * 0.5), Vector3(arena_size, 5.2, 0.8))
 
-	for i in range(18):
-		var angle := float(i) * TAU / 34.0 + rng.randf_range(-0.06, 0.06)
-		var distance := rng.randf_range(10.5, 31.0)
-		var p := Vector3(cos(angle) * distance, 0.0, sin(angle) * distance)
-		if p.distance_to(spawn_position) < 8.0:
-			continue
-		_create_obstacle(p, rng.randf_range(0.8, 2.4), rng.randf_range(1.8, 6.5), i % 3 == 0)
+	var safe_a := Vector3(0, 0.1, 15)
+	var safe_b := Vector3(0, 0.1, -14)
+	if map_id == 0:
+		for i in range(18):
+			var angle := float(i) * TAU / 34.0 + rng.randf_range(-0.06, 0.06)
+			var distance := rng.randf_range(10.5, 31.0)
+			var p := Vector3(cos(angle) * distance, 0.0, sin(angle) * distance)
+			if p.distance_to(safe_a) < 8.0 or p.distance_to(safe_b) < 8.0:
+				continue
+			_create_obstacle(p, rng.randf_range(0.8, 2.4), rng.randf_range(1.8, 6.5), i % 3 == 0)
+		for i in range(12):
+			var angle := rng.randf_range(0.0, TAU)
+			var distance := rng.randf_range(8.0, 35.0)
+			_create_neon_marker(Vector3(cos(angle) * distance, 0.025, sin(angle) * distance), marker_color)
+	elif map_id == 1:
+		for row in range(5):
+			for col in range(7):
+				var p := Vector3((col - 3) * 6.8, 0.0, (row - 2) * 7.0)
+				if p.distance_to(safe_a) < 6.0 or p.distance_to(safe_b) < 6.0:
+					continue
+				var tall := (row + col) % 4 == 0
+				_create_obstacle(p, 1.25 + float((row + col) % 2) * 0.35, 2.8 + float((row * 3 + col) % 4) * 0.75, tall)
+		for i in range(16):
+			var lane := float((i % 4) - 1.5) * 6.8
+			var z := float((i / 4) - 1.5) * 8.5
+			_create_neon_marker(Vector3(lane, 0.025, z), marker_color)
+	else:
+		for row in range(4):
+			for col in range(6):
+				var p := Vector3((col - 2.5) * 7.5, 0.0, (row - 1.5) * 8.5)
+				if p.distance_to(safe_a) < 6.5 or p.distance_to(safe_b) < 6.5:
+					continue
+				var height := 3.0 + float((row + col) % 3) * 1.2
+				_create_obstacle(p, 1.05, height, (row + col) % 2 == 0)
+		for i in range(18):
+			var angle := float(i) * TAU / 18.0
+			var radius := 25.0 if i % 2 == 0 else 13.0
+			_create_neon_marker(Vector3(cos(angle) * radius, 0.025, sin(angle) * radius), marker_color)
 
-	for i in range(12):
-		var angle := rng.randf_range(0.0, TAU)
-		var distance := rng.randf_range(8.0, 35.0)
-		_create_neon_marker(Vector3(cos(angle) * distance, 0.025, sin(angle) * distance))
 
 func _create_wall(pos: Vector3, size: Vector3) -> void:
 	var body := StaticBody3D.new()
@@ -244,18 +322,18 @@ func _create_obstacle(pos: Vector3, radius: float, height: float, emissive: bool
 	collider.shape = shape
 	body.add_child(collider)
 
-func _create_neon_marker(pos: Vector3) -> void:
+func _create_neon_marker(pos: Vector3, marker_color: Color = Color("#8f7450")) -> void:
 	var marker := MeshInstance3D.new()
 	var box := BoxMesh.new()
 	box.size = Vector3(0.16, 0.035, rng.randf_range(0.8, 1.8))
-	box.material = _mat(Color("#8f7450"), 0.12, 0.48, Color("#8f7450"), 0.36)
+	box.material = _mat(marker_color, 0.12, 0.48, marker_color, 0.48)
 	marker.mesh = box
 	marker.position = pos
 	marker.rotation.y = rng.randf_range(0.0, TAU)
 	arena_root.add_child(marker)
 	lod_nodes.append(marker)
 
-func _build_landmarks() -> void:
+func _build_landmarks(map_id: int = 0) -> void:
 	for side in [-1.0, 1.0]:
 		var tower := Node3D.new()
 		tower.position = Vector3(side * 27.0, 0.0, -27.0)
@@ -296,8 +374,8 @@ func _create_camera() -> void:
 	camera.name = "GameplayCamera"
 	camera.current = true
 	add_child(camera)
-	camera.global_position = Vector3(0, 9.0, 19.0)
-	camera.fov = 67.0
+	camera.global_position = Vector3(0, 7.2, 22.0)
+	camera.fov = 63.0
 	camera_yaw = 0.0
 	camera_pitch = -0.22
 	camera.look_at(Vector3(0, 1.0, 4.0), Vector3.UP)
@@ -383,7 +461,19 @@ func _build_ui() -> void:
 	var best := _label("BEST SCORE  %06d" % best_score, 17)
 	best.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	menu_box.add_child(best)
-	start_button = _button("START GAME", Vector2(300, 62), 24)
+	var choose_map := _label("CHOOSE MAP", 18)
+	choose_map.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	menu_box.add_child(choose_map)
+	map_buttons.clear()
+	for i in range(MAP_NAMES.size()):
+		var map_button := _button(MAP_NAMES[i], Vector2(380, 48), 18)
+		map_button.pressed.connect(_select_map.bind(i))
+		menu_box.add_child(map_button)
+		map_buttons.append(map_button)
+	map_info_label = _label(MAP_DESCRIPTIONS[0], 14)
+	map_info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	menu_box.add_child(map_info_label)
+	start_button = _button("START GAME", Vector2(300, 58), 23)
 	start_button.pressed.connect(_start_game_pressed)
 	menu_box.add_child(start_button)
 	if save_system.has_save():
@@ -394,6 +484,7 @@ func _build_ui() -> void:
 	info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	menu_box.add_child(info)
 	layer.add_child(menu_panel)
+	_select_map(selected_map)
 
 	pause_panel = PanelContainer.new()
 	pause_panel.set_anchors_preset(Control.PRESET_CENTER)
@@ -944,7 +1035,7 @@ func _update_camera(delta: float) -> void:
 		return
 	var orbit_basis := Basis(Vector3.UP, camera_yaw)
 	var pitch_basis := Basis(Vector3.RIGHT, camera_pitch)
-	var offset := orbit_basis * (pitch_basis * Vector3(0.0, 7.8, 12.5))
+	var offset := orbit_basis * (pitch_basis * Vector3(0.0, 6.2, 9.4))
 	var desired := player.global_position + offset
 	camera.global_position = camera.global_position.lerp(desired, min(1.0, delta * 7.0))
 	var target_offset := orbit_basis * Vector3(0.0, 0.7, -1.5)
@@ -953,9 +1044,15 @@ func _update_camera(delta: float) -> void:
 
 func _input(event: InputEvent) -> void:
 	if not running:
-		if event is InputEventScreenTouch and event.pressed and start_button and start_button.visible and start_button.get_global_rect().has_point(event.position):
-			_start_game_pressed()
-			get_viewport().set_input_as_handled()
+		if event is InputEventScreenTouch and event.pressed:
+			for i in range(map_buttons.size()):
+				if map_buttons[i].visible and map_buttons[i].get_global_rect().has_point(event.position):
+					_select_map(i)
+					get_viewport().set_input_as_handled()
+					return
+			if start_button and start_button.visible and start_button.get_global_rect().has_point(event.position):
+				_start_game_pressed()
+				get_viewport().set_input_as_handled()
 		return
 	if game_over or get_tree().paused or not joystick:
 		return

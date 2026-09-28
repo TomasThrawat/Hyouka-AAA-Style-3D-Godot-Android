@@ -58,11 +58,11 @@ func _build_visual() -> void:
 	visual_root.name = "Visual"
 	add_child(visual_root)
 
-	var tint: Color = Color("#777168")
+	var tint: Color = Color("#f1b394")
 	if enemy_type == "juggernaut":
-		tint = Color("#635b50")
+		tint = Color("#ff9c77")
 	elif enemy_type == "striker":
-		tint = Color("#858078")
+		tint = Color("#ffd0a8")
 	var model_scale: float = 1.10 if enemy_type == "juggernaut" else 1.03
 	var model: Node3D = BAKED_CHARACTER_SCRIPT.create("res://assets/worker_human.meshbin", tint, model_scale)
 	visual_root.add_child(model)

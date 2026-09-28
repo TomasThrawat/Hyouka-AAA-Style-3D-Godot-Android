@@ -14,12 +14,36 @@ static func create(path: String, tint: Color, scale_factor: float = 1.0) -> Node
 	instance.mesh = mesh
 	var material: StandardMaterial3D = StandardMaterial3D.new()
 	material.albedo_color = tint
-	material.metallic = 0.24
-	material.roughness = 0.66
+	material.metallic = 0.12
+	material.roughness = 0.60
 	material.specular_mode = BaseMaterial3D.SPECULAR_SCHLICK_GGX
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	material.emission_enabled = true
+	material.emission = tint
+	material.emission_energy_multiplier = 0.12
 	instance.material_override = material
+	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	root.add_child(instance)
-	root.scale = Vector3.ONE * scale_factor
+
+	var ring := MeshInstance3D.new()
+	ring.name = "CharacterMarker"
+	var torus := TorusMesh.new()
+	torus.inner_radius = 0.30
+	torus.outer_radius = 0.38
+	var ring_material := StandardMaterial3D.new()
+	ring_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	ring_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	ring_material.albedo_color = tint
+	ring_material.emission_enabled = true
+	ring_material.emission = tint
+	ring_material.emission_energy_multiplier = 1.8
+	torus.material = ring_material
+	ring.mesh = torus
+	ring.position.y = 0.02
+	root.add_child(ring)
+
+	root.scale = Vector3(scale_factor * 1.14, scale_factor, scale_factor * 1.14)
 	return root
 
 static func _load_mesh(path: String) -> ArrayMesh:

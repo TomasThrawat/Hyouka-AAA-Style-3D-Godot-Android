@@ -39,7 +39,7 @@ func _ready() -> void:
 	_build_visual()
 
 func _build_visual() -> void:
-	visual_root = BAKED_CHARACTER_SCRIPT.create("res://assets/player_human.meshbin", Color("#aaa49a"), 1.04)
+	visual_root = BAKED_CHARACTER_SCRIPT.create("res://assets/player_human.meshbin", Color("#b8e9ff"), 1.18)
 	visual_root.name = "CharacterModel"
 	add_child(visual_root)
 
