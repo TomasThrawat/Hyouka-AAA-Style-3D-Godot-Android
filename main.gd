@@ -472,7 +472,7 @@ func _create_touch_controls() -> void:
 func _layout_touch_controls() -> void:
 	if not joystick or not fire_button or not boost_button:
 		return
-	var viewport_size := get_viewport_rect().size
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
 	joystick.position = Vector2(32.0, max(24.0, viewport_size.y - 248.0))
 	fire_button.position = Vector2(max(24.0, viewport_size.x - 208.0), max(24.0, viewport_size.y - 228.0))
 	boost_button.position = Vector2(max(24.0, viewport_size.x - 208.0), max(24.0, viewport_size.y - 112.0))
@@ -921,7 +921,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			if event.index == camera_touch_pointer:
 				camera_touch_pointer = -1
 	elif event is InputEventScreenDrag and event.index == camera_touch_pointer:
-		var drag_delta := event.position - camera_touch_last
+		var drag_delta: Vector2 = event.position - camera_touch_last
 		camera_touch_last = event.position
 		camera_yaw -= drag_delta.x * CAMERA_TOUCH_SENSITIVITY
 		camera_pitch = clamp(camera_pitch - drag_delta.y * CAMERA_TOUCH_SENSITIVITY * 0.72, -0.88, 0.36)
