@@ -126,8 +126,29 @@ func take_damage(amount: float) -> void:
 	invulnerability = 0.28
 	health = max(0.0, health - amount)
 	health_changed.emit(health)
+	_hit_feedback()
 	if health <= 0.0:
 		died.emit()
+
+func _hit_feedback() -> void:
+	var mesh := visual_root.find_child("CharacterMesh", true, false) as MeshInstance3D if visual_root else null
+	if mesh == null:
+		return
+	var base := mesh.material_override
+	var flash := StandardMaterial3D.new()
+	flash.albedo_color = Color("#e8d9c6")
+	flash.emission_enabled = true
+	flash.emission = Color("#b98959")
+	flash.emission_energy_multiplier = 1.2
+	mesh.material_override = flash
+	var tween := create_tween()
+	tween.tween_interval(0.055)
+	tween.tween_callback(func():
+		if is_instance_valid(mesh):
+			mesh.material_override = base
+	)
+
+
 
 func heal(amount: float) -> void:
 	health = min(max_health, health + amount)

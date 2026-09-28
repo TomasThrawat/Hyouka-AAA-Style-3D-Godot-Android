@@ -146,9 +146,30 @@ func _update_animation(delta: float, direction: Vector3) -> void:
 
 func take_damage(amount: float) -> void:
 	health -= amount
+	_hit_feedback()
 	if health <= 0.0:
 		defeated.emit(self, boss)
 		queue_free()
+
+func _hit_feedback() -> void:
+	var mesh := visual_root.find_child("CharacterMesh", true, false) as MeshInstance3D if visual_root else null
+	if mesh == null:
+		return
+	var base := mesh.material_override
+	var flash := StandardMaterial3D.new()
+	flash.albedo_color = Color("#f0deca")
+	flash.emission_enabled = true
+	flash.emission = Color("#c18b52")
+	flash.emission_energy_multiplier = 1.35
+	mesh.material_override = flash
+	var tween := create_tween()
+	tween.tween_interval(0.055)
+	tween.tween_callback(func():
+		if is_instance_valid(mesh):
+			mesh.material_override = base
+	)
+
+
 
 func _mat(color: Color, metallic: float, roughness: float, emission: Color, energy: float) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
