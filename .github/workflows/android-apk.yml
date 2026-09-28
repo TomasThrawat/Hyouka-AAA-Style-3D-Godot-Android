@@ -140,9 +140,9 @@ jobs:
             adb shell am force-stop com.tomasthrawat.hyoukaneonfrontier
             adb shell monkey -p com.tomasthrawat.hyoukaneonfrontier 1
             sleep 4
-            SIZE="$(adb shell wm size | awk -F': ' 'END {print $2}' | tr -d '')"
-            WIDTH="$(echo "$SIZE" | awk -Fx '{print $1}')"
-            HEIGHT="$(echo "$SIZE" | awk -Fx '{print $2}')"
+            SIZE="$(adb shell wm size | sed -n 's/.*: //p' | tr -cd '0-9x\n' | tail -1)"
+            WIDTH="$(echo "$SIZE" | cut -d'x' -f1)"
+            HEIGHT="$(echo "$SIZE" | cut -d'x' -f2)"
             test -n "$WIDTH"
             test -n "$HEIGHT"
             CENTER_X=$((WIDTH / 2))
