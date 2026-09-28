@@ -309,7 +309,7 @@ func _build_ui() -> void:
 
 	var top_margin := MarginContainer.new()
 	top_margin.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE, Control.PRESET_MODE_MINSIZE, 18)
-	top_margin.size.y = 124
+	top_margin.custom_minimum_size.y = 124
 	layer.add_child(top_margin)
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 12)
@@ -350,7 +350,7 @@ func _build_ui() -> void:
 	objective_label = _label("OBJECTIVE: SURVIVE", 18)
 	objective_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	objective_label.position = Vector2(0, 88)
-	objective_label.size = Vector2(0, 34)
+	objective_label.custom_minimum_size = Vector2(0, 34)
 	objective_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	layer.add_child(objective_label)
 
