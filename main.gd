@@ -1,15 +1,14 @@
 extends Node3D
 
 const PLAYER_SCRIPT = preload("res://player.gd")
-const ENEMY_SCRIPT = preload("res://enemy.gd")
+const HAZARD_SCRIPT = preload("res://hazard_drone.gd")
 
 var player: CharacterBody3D
 var camera: Camera3D
 var arena_size := 42.0
 var rng := RandomNumberGenerator.new()
-var enemies: Array[Node3D] = []
+var hazards: Array[Node3D] = []
 var pickups: Array[Node3D] = []
-var projectiles: Array[Dictionary] = []
 var wave := 0
 var score := 0
 var running := false
@@ -24,12 +23,9 @@ var health_bar: ProgressBar
 var message_label: Label
 var menu_panel: PanelContainer
 var pause_button: Button
-var fire_button: Button
-var up_button: Button
-var down_button: Button
-var left_button: Button
-var right_button: Button
+var boost_button: Button
 var touch_buttons: Array[Button] = []
+var trail_particles: GPUParticles3D
 
 func _ready() -> void:
 	rng.randomize()
@@ -45,14 +41,13 @@ func _process(delta: float) -> void:
 	if running and not game_over and not get_tree().paused:
 		wave_timer -= delta
 		pickup_timer -= delta
-		_update_projectiles(delta)
 		_update_pickups(delta)
 		_update_camera(delta)
 		if wave_timer <= 0.0:
 			_start_wave()
 		if pickup_timer <= 0.0:
 			_spawn_pickup()
-			pickup_timer = rng.randf_range(5.0, 8.0)
+			pickup_timer = rng.randf_range(4.0, 7.0)
 	_update_hud()
 
 func _build_environment() -> void:
@@ -145,6 +140,7 @@ func _create_obstacle(pos: Vector3, radius: float, height: float) -> void:
 	ring.light_color = Color("#5b74ff")
 	ring.light_energy = 1.4
 	ring.omni_range = radius * 4.0
+	ring.position.y = height * 0.2
 	body.add_child(ring)
 	var collider := CollisionShape3D.new()
 	var shape := CylinderShape3D.new()
@@ -168,7 +164,29 @@ func _create_player() -> void:
 	add_child(player)
 	player.health_changed.connect(_on_player_health_changed)
 	player.died.connect(_on_player_died)
-	player.fire_requested.connect(_spawn_projectile)
+
+	var trail := GPUParticles3D.new()
+	trail.amount = 80
+	trail.lifetime = 0.65
+	trail.emitting = true
+	trail.position = Vector3(0, 0.45, 0.8)
+	var process_material := ParticleProcessMaterial.new()
+	process_material.direction = Vector3(0, 0, 1)
+	process_material.spread = 15.0
+	process_material.initial_velocity_min = 0.5
+	process_material.initial_velocity_max = 1.3
+	process_material.scale_min = 0.035
+	process_material.scale_max = 0.08
+	process_material.color = Color("#4ceaff")
+	trail.process_material = process_material
+	var particle_mesh := SphereMesh.new()
+	particle_mesh.radius = 0.045
+	particle_mesh.height = 0.09
+	particle_mesh.material = _mat(Color("#4ceaff"), 0.0, 0.15, Color("#4ceaff"), 3.0)
+	trail.draw_pass_1 = particle_mesh
+	player.add_child(trail)
+	trail_particles = trail
+	player.boost_requested.connect(_on_boost)
 
 func _create_camera() -> void:
 	camera = Camera3D.new()
@@ -184,7 +202,6 @@ func _build_ui() -> void:
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 20)
 	layer.add_child(margin)
-
 	var top := HBoxContainer.new()
 	top.alignment = BoxContainer.ALIGNMENT_BEGIN
 	top.add_theme_constant_override("separation", 14)
@@ -207,11 +224,11 @@ func _build_ui() -> void:
 	layer.add_child(pause_button)
 
 	var crosshair := Label.new()
-	crosshair.text = "＋"
-	crosshair.add_theme_font_size_override("font_size", 40)
+	crosshair.text = "✦"
+	crosshair.add_theme_font_size_override("font_size", 34)
 	crosshair.modulate = Color("#87edff")
 	crosshair.set_anchors_preset(Control.PRESET_CENTER)
-	crosshair.position = Vector2(-20, -35)
+	crosshair.position = Vector2(-18, -30)
 	layer.add_child(crosshair)
 
 	message_label = _label("", 22)
@@ -227,16 +244,17 @@ func _build_ui() -> void:
 	menu_box.alignment = BoxContainer.ALIGNMENT_CENTER
 	menu_box.add_theme_constant_override("separation", 18)
 	menu_panel.add_child(menu_box)
+
 	var title := _label("NEON FRONTIER", 46)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	menu_box.add_child(title)
-	var subtitle := _label("Procedural 3D combat prototype", 20)
+	var subtitle := _label("Procedural 3D survival prototype", 20)
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	menu_box.add_child(subtitle)
 	var start := _button("START RUN", Vector2(260, 60))
 	start.pressed.connect(_start_game)
 	menu_box.add_child(start)
-	var rules := _label("Move: arrows / on-screen controls    •    Fire: Space / FIRE", 16)
+	var rules := _label("Move: arrows / touch    •    Boost: Shift / BOOST", 16)
 	rules.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	menu_box.add_child(rules)
 	layer.add_child(menu_panel)
@@ -244,17 +262,17 @@ func _build_ui() -> void:
 	_create_touch_controls(layer)
 
 func _create_touch_controls(layer: CanvasLayer) -> void:
-	left_button = _button("◀", Vector2(70, 70))
-	right_button = _button("▶", Vector2(70, 70))
-	up_button = _button("▲", Vector2(70, 70))
-	down_button = _button("▼", Vector2(70, 70))
-	fire_button = _button("FIRE", Vector2(100, 90))
+	left_button := _button("◀", Vector2(70, 70))
+	right_button := _button("▶", Vector2(70, 70))
+	up_button := _button("▲", Vector2(70, 70))
+	down_button := _button("▼", Vector2(70, 70))
+	boost_button := _button("BOOST", Vector2(110, 82))
 	left_button.position = Vector2(24, 570)
 	down_button.position = Vector2(102, 648)
 	up_button.position = Vector2(102, 492)
 	right_button.position = Vector2(180, 570)
-	fire_button.position = Vector2(1080, 585)
-	for b in [left_button, down_button, up_button, right_button, fire_button]:
+	boost_button.position = Vector2(1060, 592)
+	for b in [left_button, down_button, up_button, right_button, boost_button]:
 		layer.add_child(b)
 		touch_buttons.append(b)
 	left_button.button_down.connect(func(): player.set_move_input(Vector2(-1, 0)))
@@ -263,11 +281,15 @@ func _create_touch_controls(layer: CanvasLayer) -> void:
 	down_button.button_down.connect(func(): player.set_move_input(Vector2(0, 1)))
 	for b in [left_button, right_button, up_button, down_button]:
 		b.button_up.connect(func(): player.clear_move_input())
-	fire_button.pressed.connect(_fire_pressed)
+	boost_button.pressed.connect(_boost_pressed)
 
-func _fire_pressed() -> void:
+func _boost_pressed() -> void:
 	if running and not game_over and not get_tree().paused and player:
-		player.fire()
+		player.boost()
+
+func _boost_keyboard() -> void:
+	if running and not game_over and not get_tree().paused and player and Input.is_key_pressed(KEY_SHIFT):
+		player.boost()
 
 func _start_game() -> void:
 	menu_panel.hide()
@@ -278,16 +300,16 @@ func _start_game() -> void:
 	score = 0
 	player.health = player.max_health
 	player.position = Vector3(0, 0.1, 8)
-	for e in enemies:
+	for e in hazards:
 		if is_instance_valid(e):
 			e.queue_free()
-	enemies.clear()
+	hazards.clear()
 	for p in pickups:
 		if is_instance_valid(p):
 			p.queue_free()
 	pickups.clear()
 	wave_timer = 0.1
-	message_label.text = "SURVIVE THE WAVE"
+	message_label.text = "SURVIVE THE HAZARDS"
 	_update_hud()
 
 func _show_menu() -> void:
@@ -301,24 +323,24 @@ func _show_menu() -> void:
 
 func _start_wave() -> void:
 	wave += 1
-	wave_timer = 22.0
+	wave_timer = 20.0
 	var count := min(18, 3 + wave * 2)
 	for i in range(count):
-		_spawn_enemy(1.0 + wave * 0.32)
+		_spawn_hazard(1.0 + wave * 0.3)
 	message_label.text = "WAVE %d" % wave
 	var tween := create_tween()
-	tween.tween_interval(1.6)
+	tween.tween_interval(1.4)
 	tween.tween_callback(func(): if running and not game_over: message_label.text = "")
 
-func _spawn_enemy(difficulty: float) -> void:
-	var enemy := ENEMY_SCRIPT.new()
+func _spawn_hazard(difficulty: float) -> void:
+	var drone := HAZARD_SCRIPT.new()
 	var angle := rng.randf_range(0.0, TAU)
 	var distance := rng.randf_range(15.0, 19.0)
-	enemy.position = Vector3(cos(angle) * distance, 0.1, sin(angle) * distance)
-	add_child(enemy)
-	enemy.setup(player, difficulty)
-	enemy.defeated.connect(_on_enemy_defeated)
-	enemies.append(enemy)
+	drone.position = Vector3(cos(angle) * distance, 0.1, sin(angle) * distance)
+	add_child(drone)
+	drone.setup(player, difficulty)
+	drone.defeated.connect(_on_hazard_removed)
+	hazards.append(drone)
 
 func _spawn_pickup() -> void:
 	var orb := Area3D.new()
@@ -352,51 +374,22 @@ func _update_pickups(delta: float) -> void:
 			p.queue_free()
 			pickups.remove_at(i)
 
-func _spawn_projectile(origin: Vector3, direction: Vector3) -> void:
-	var shot := MeshInstance3D.new()
-	var sphere := SphereMesh.new()
-	sphere.radius = 0.14
-	sphere.height = 0.28
-	sphere.material = _mat(Color("#baf8ff"), 0.05, 0.08, Color("#40eaff"), 4.5)
-	shot.mesh = sphere
-	shot.position = origin
-	add_child(shot)
-	var light := OmniLight3D.new()
-	light.light_color = Color("#40eaff")
-	light.light_energy = 3.5
-	light.omni_range = 2.5
-	shot.add_child(light)
-	projectiles.append({"node": shot, "direction": direction, "life": 1.6, "damage": 18.0})
-
-func _update_projectiles(delta: float) -> void:
-	for i in range(projectiles.size() - 1, -1, -1):
-		var item: Dictionary = projectiles[i]
-		var node: Node3D = item["node"]
-		if not is_instance_valid(node):
-			projectiles.remove_at(i)
-			continue
-		node.position += item["direction"] * 23.0 * delta
-		item["life"] = float(item["life"]) - delta
-		var hit := false
-		for enemy in enemies.duplicate():
-			if is_instance_valid(enemy) and node.global_position.distance_to(enemy.global_position + Vector3.UP * 0.7) < 1.1:
-				enemy.take_damage(float(item["damage"]))
-				hit = true
-				break
-		if hit or float(item["life"]) <= 0.0:
-			node.queue_free()
-			projectiles.remove_at(i)
-
-func _on_enemy_defeated(enemy: Node3D) -> void:
-	score += 120 + wave * 15
-	enemies.erase(enemy)
-
 func _update_camera(delta: float) -> void:
 	if not player or not camera:
 		return
 	var desired := player.global_position + Vector3(0, 7.2, 10.5)
 	camera.global_position = camera.global_position.lerp(desired, min(1.0, delta * 4.0))
 	camera.look_at(player.global_position + Vector3(0, 0.7, -1.4), Vector3.UP)
+
+func _on_boost() -> void:
+	message_label.text = "BOOST!"
+	var tween := create_tween()
+	tween.tween_interval(0.5)
+	tween.tween_callback(func(): if running and not game_over: message_label.text = "")
+
+func _on_hazard_removed(drone: Node3D) -> void:
+	score += 120 + wave * 15
+	hazards.erase(drone)
 
 func _update_hud() -> void:
 	if score_label:
@@ -411,11 +404,15 @@ func _update_hud() -> void:
 	if health_bar:
 		health_bar.value = player.health if player else 100.0
 
+func _input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and event.keycode == KEY_SHIFT:
+		_boost_pressed()
+
 func _on_player_health_changed(value: float) -> void:
 	if health_bar:
 		health_bar.value = value
 	if value <= 30.0 and running:
-		message_label.text = "LOW HEALTH"
+		message_label.text = "LOW ENERGY"
 	elif running:
 		message_label.text = ""
 

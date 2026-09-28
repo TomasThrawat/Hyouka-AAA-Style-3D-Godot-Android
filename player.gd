@@ -1,6 +1,6 @@
 extends CharacterBody3D
 
-signal fire_requested(origin: Vector3, direction: Vector3)
+signal boost_requested
 signal health_changed(value: float)
 signal died
 
@@ -11,7 +11,8 @@ signal died
 
 var health := 100.0
 var move_stick := Vector2.ZERO
-var muzzle: Marker3D
+var boost_time := 0.0
+var boost_cooldown := 0.0
 
 func _ready() -> void:
 	health = max_health
@@ -45,10 +46,6 @@ func _build_visual() -> void:
 	pack.position = Vector3(0, 0.82, 0.42)
 	add_child(pack)
 
-	muzzle = Marker3D.new()
-	muzzle.position = Vector3(0, 0.9, -0.95)
-	add_child(muzzle)
-
 	var collider := CollisionShape3D.new()
 	var shape := CapsuleShape3D.new()
 	shape.radius = 0.46
@@ -60,9 +57,12 @@ func _build_visual() -> void:
 func _physics_process(delta: float) -> void:
 	if get_tree().paused:
 		return
+	boost_cooldown = max(0.0, boost_cooldown - delta)
+	boost_time = max(0.0, boost_time - delta)
 	var keyboard := Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
 	var input_vector := move_stick if move_stick.length() > 0.05 else keyboard
-	var desired := Vector3(input_vector.x, 0.0, input_vector.y) * move_speed
+	var current_speed := move_speed * (1.9 if boost_time > 0.0 else 1.0)
+	var desired := Vector3(input_vector.x, 0.0, input_vector.y) * current_speed
 	velocity.x = move_toward(velocity.x, desired.x, acceleration * delta)
 	velocity.z = move_toward(velocity.z, desired.z, acceleration * delta)
 	if input_vector.length() < 0.05:
@@ -78,9 +78,12 @@ func set_move_input(value: Vector2) -> void:
 func clear_move_input() -> void:
 	move_stick = Vector2.ZERO
 
-func fire() -> void:
-	if muzzle:
-		fire_requested.emit(muzzle.global_position, -global_transform.basis.z.normalized())
+func boost() -> void:
+	if boost_cooldown > 0.0 or get_tree().paused:
+		return
+	boost_time = 0.65
+	boost_cooldown = 2.0
+	boost_requested.emit()
 
 func take_damage(amount: float) -> void:
 	if health <= 0.0:

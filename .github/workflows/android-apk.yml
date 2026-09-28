@@ -14,21 +14,18 @@ jobs:
     timeout-minutes: 45
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Setup Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "17"
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android SDK packages
-        run: |
-          yes | sdkmanager --licenses >/dev/null 2>&1 || true
-          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+        uses: android-actions/setup-android@v4
+        with:
+          packages: "platform-tools platforms;android-35 build-tools;35.0.0"
 
       - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
@@ -94,6 +91,17 @@ jobs:
             echo "Unexpected Godot log marker found."
             exit 1
           fi
+
+      - name: Verify repository is APK-only
+        run: |
+          set -Eeuo pipefail
+          if find . -type f \( -iname "*.html" -o -iname "*.htm" \) -print -quit | grep -q .; then
+            echo "HTML files are not allowed in this APK-only repository."
+            exit 1
+          fi
+          test -f project.godot
+          test -f export_presets.cfg
+          test -f build/HyoukaNeonFrontier-debug.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
