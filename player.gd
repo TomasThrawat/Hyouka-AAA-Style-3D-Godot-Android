@@ -29,6 +29,7 @@ var left_leg: Node3D
 var right_leg: Node3D
 var weapon: Node3D
 var weapon_flash: OmniLight3D
+var visual_root: Node3D
 
 func _ready() -> void:
 	collision_layer = 1
@@ -36,166 +37,23 @@ func _ready() -> void:
 	_build_visual()
 
 func _build_visual() -> void:
-	torso = Node3D.new()
-	torso.name = "Torso"
-	add_child(torso)
-
-	var chest := MeshInstance3D.new()
-	var chest_mesh := CapsuleMesh.new()
-	chest_mesh.radius = 0.48
-	chest_mesh.height = 1.18
-	chest_mesh.material = _mat(Color("#32302c"), 0.72, 0.34, Color("#a88452"), 0.18)
-	chest.mesh = chest_mesh
-	chest.scale = Vector3(1.0, 1.0, 0.72)
-	chest.position.y = 1.24
-	torso.add_child(chest)
-
-	var abdomen := MeshInstance3D.new()
-	var abdomen_mesh := CapsuleMesh.new()
-	abdomen_mesh.radius = 0.34
-	abdomen_mesh.height = 0.72
-	abdomen_mesh.material = _mat(Color("#242321"), 0.64, 0.42, Color("#6f5b43"), 0.10)
-	abdomen.mesh = abdomen_mesh
-	abdomen.scale = Vector3(1.0, 1.0, 0.72)
-	abdomen.position = Vector3(0, 0.60, 0)
-	torso.add_child(abdomen)
-
-	head = Node3D.new()
-	head.name = "Head"
-	torso.add_child(head)
-	var helmet := MeshInstance3D.new()
-	var helmet_mesh := SphereMesh.new()
-	helmet_mesh.radius = 0.39
-	helmet_mesh.height = 0.72
-	helmet_mesh.material = _mat(Color("#3b3935"), 0.68, 0.30, Color("#b18c59"), 0.16)
-	helmet.mesh = helmet_mesh
-	helmet.position = Vector3(0, 0.82, 0)
-	head.add_child(helmet)
-	var visor := MeshInstance3D.new()
-	var visor_mesh := CapsuleMesh.new()
-	visor_mesh.radius = 0.17
-	visor_mesh.height = 0.48
-	visor_mesh.material = _mat(Color("#171817"), 0.78, 0.18, Color("#c09a60"), 0.30)
-	visor.mesh = visor_mesh
-	visor.scale = Vector3(1.0, 0.34, 0.38)
-	visor.rotation_degrees.z = 90.0
-	visor.position = Vector3(0, 0.79, -0.33)
-	head.add_child(visor)
-
-	for x in [-1.0, 1.0]:
-		var shoulder := MeshInstance3D.new()
-		var shoulder_mesh := SphereMesh.new()
-		shoulder_mesh.radius = 0.24
-		shoulder_mesh.height = 0.44
-		shoulder_mesh.material = _mat(Color("#403d37"), 0.70, 0.30, Color("#8d7049"), 0.12)
-		shoulder.mesh = shoulder_mesh
-		shoulder.position = Vector3(x * 0.65, 1.40, 0)
-		torso.add_child(shoulder)
-
-		var arm := MeshInstance3D.new()
-		var arm_mesh := CapsuleMesh.new()
-		arm_mesh.radius = 0.16
-		arm_mesh.height = 0.94
-		arm_mesh.material = _mat(Color("#292825"), 0.60, 0.40, Color("#6e5941"), 0.10)
-		arm.mesh = arm_mesh
-		arm.position = Vector3(x * 0.70, 0.98, -0.02)
-		arm.rotation_degrees.z = x * -8.0
-		torso.add_child(arm)
-
-	left_leg = _build_leg("LeftLeg", -0.27)
-	right_leg = _build_leg("RightLeg", 0.27)
-
-	weapon = Node3D.new()
-	weapon.name = "Weapon"
-	weapon.position = Vector3(0.0, 1.03, -0.58)
-	add_child(weapon)
-	var barrel := MeshInstance3D.new()
-	var barrel_mesh := CylinderMesh.new()
-	barrel_mesh.top_radius = 0.095
-	barrel_mesh.bottom_radius = 0.13
-	barrel_mesh.height = 0.76
-	barrel_mesh.material = _mat(Color("#181917"), 0.78, 0.28, Color("#b18c59"), 0.20)
-	barrel.mesh = barrel_mesh
-	barrel.rotation_degrees.x = 90.0
-	barrel.position.z = -0.34
-	weapon.add_child(barrel)
-
-	var grip := MeshInstance3D.new()
-	var grip_mesh := CapsuleMesh.new()
-	grip_mesh.radius = 0.12
-	grip_mesh.height = 0.42
-	grip_mesh.material = _mat(Color("#232220"), 0.58, 0.44, Color("#6e5a43"), 0.08)
-	grip.mesh = grip_mesh
-	grip.rotation_degrees.x = 15.0
-	grip.position = Vector3(0, -0.20, 0.05)
-	weapon.add_child(grip)
-
-	var pack := MeshInstance3D.new()
-	var pack_mesh := CapsuleMesh.new()
-	pack_mesh.radius = 0.25
-	pack_mesh.height = 0.88
-	pack_mesh.material = _mat(Color("#242320"), 0.55, 0.48, Color("#6d5942"), 0.08)
-	pack.mesh = pack_mesh
-	pack.scale = Vector3(1.2, 1.0, 0.55)
-	pack.position = Vector3(0, 1.04, 0.48)
-	add_child(pack)
-
-	var thruster := GPUParticles3D.new()
-	thruster.name = "Thruster"
-	thruster.amount = 6
-	thruster.lifetime = 0.30
-	thruster.position = Vector3(0, 0.42, 0.42)
-	var pm := ParticleProcessMaterial.new()
-	pm.direction = Vector3(0, 0, 1)
-	pm.spread = 14.0
-	pm.initial_velocity_min = 0.8
-	pm.initial_velocity_max = 1.8
-	pm.scale_min = 0.025
-	pm.scale_max = 0.06
-	pm.color = Color("#b18c59")
-	thruster.process_material = pm
-	var particle_mesh := SphereMesh.new()
-	particle_mesh.radius = 0.04
-	particle_mesh.height = 0.08
-	particle_mesh.material = _mat(Color("#b18c59"), 0.0, 0.16, Color("#b18c59"), 0.7)
-	thruster.draw_pass_1 = particle_mesh
-	thruster.emitting = true
-	add_child(thruster)
-
+	var packed := preload("res://assets/player_human.glb") as PackedScene
+	var model := packed.instantiate() as Node3D
+	model.name = "CharacterModel"
+	model.position = Vector3.ZERO
+	model.scale = Vector3.ONE * 1.04
+	add_child(model)
+	visual_root = model
 	var collider := CollisionShape3D.new()
 	var shape := CapsuleShape3D.new()
-	shape.radius = 0.46
-	shape.height = 1.85
+	shape.radius = 0.42
+	shape.height = 1.78
 	collider.shape = shape
-	collider.position.y = 0.95
+	collider.position.y = 0.89
 	add_child(collider)
 
 
-func _build_leg(node_name: String, x: float) -> Node3D:
-	var leg := Node3D.new()
-	leg.name = node_name
-	leg.position = Vector3(x, 0.55, 0)
-	add_child(leg)
-	var mesh := MeshInstance3D.new()
-	var capsule := CapsuleMesh.new()
-	capsule.radius = 0.18
-	capsule.height = 1.02
-	capsule.material = _mat(Color("#292825"), 0.62, 0.40, Color("#6f5b43"), 0.08)
-	mesh.mesh = capsule
-	leg.add_child(mesh)
-	var boot := MeshInstance3D.new()
-	var boot_mesh := CapsuleMesh.new()
-	boot_mesh.radius = 0.14
-	boot_mesh.height = 0.48
-	boot_mesh.material = _mat(Color("#171715"), 0.72, 0.34, Color("#8b7049"), 0.10)
-	boot.mesh = boot_mesh
-	boot.scale = Vector3(1.15, 0.48, 1.65)
-	boot.rotation_degrees.x = 90.0
-	boot.position = Vector3(0, -0.47, -0.15)
-	leg.add_child(boot)
-	return leg
-
-func _physics_process(delta: float) -> void:
+(delta: float) -> void:
 	if get_tree().paused:
 		return
 	anim_time += delta
@@ -228,17 +86,14 @@ func _physics_process(delta: float) -> void:
 	_update_animation(delta)
 
 func _update_animation(delta: float) -> void:
+	if visual_root == null:
+		return
 	var movement := Vector2(velocity.x, velocity.z).length()
 	var run_phase := anim_time * (7.0 + movement * 0.8)
-	if left_leg and right_leg:
-		left_leg.rotation.x = sin(run_phase) * min(0.35, movement * 0.045)
-		right_leg.rotation.x = -sin(run_phase) * min(0.35, movement * 0.045)
-	if torso:
-		torso.position.y = 0.035 + sin(anim_time * 3.0) * (0.018 if movement < 0.2 else 0.045)
-	if head:
-		head.rotation.z = sin(anim_time * 2.3) * 0.018
-	if weapon:
-		weapon.rotation.x = lerp(weapon.rotation.x, -0.04 if movement < 0.2 else -0.08, min(1.0, delta * 8.0))
+	var target_bob := 0.018 + sin(run_phase * 0.5) * (0.008 if movement < 0.2 else 0.022)
+	visual_root.position.y = lerp(visual_root.position.y, target_bob, min(1.0, delta * 8.0))
+	visual_root.rotation.y = lerp_angle(visual_root.rotation.y, rotation.y, min(1.0, delta * (9.0 if movement > 0.3 else 4.0)))
+
 
 func shoot() -> void:
 	if fire_cooldown > 0.0 or get_tree().paused or health <= 0.0:
