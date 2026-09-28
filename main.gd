@@ -61,6 +61,8 @@ var pause_button: Button
 var fire_button: Button
 var boost_button: Button
 var joystick: Control
+var touch_layer: CanvasLayer
+var touch_root: Control
 var touch_controls: Array[Control] = []
 
 func _ready() -> void:
@@ -112,20 +114,20 @@ func _build_environment() -> void:
 	world_environment = WorldEnvironment.new()
 	var environment := Environment.new()
 	environment.background_mode = Environment.BG_COLOR
-	environment.background_color = Color("#03050d")
+	environment.background_color = Color("#11100e")
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_color = Color("#526b92")
-	environment.ambient_light_energy = 0.82
+	environment.ambient_light_color = Color("#8a8275")
+	environment.ambient_light_energy = 0.68
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	environment.tonemap_exposure = 1.05
+	environment.tonemap_exposure = 0.92
 	world_environment.environment = environment
 	add_child(world_environment)
 
 	var sun := DirectionalLight3D.new()
 	sun.name = "KeyLight"
 	sun.rotation_degrees = Vector3(-53.0, -31.0, 0.0)
-	sun.light_color = Color("#c5d9ff")
-	sun.light_energy = 1.1
+	sun.light_color = Color("#e3ddd2")
+	sun.light_energy = 1.28
 	sun.shadow_enabled = false
 	add_child(sun)
 	dynamic_lights.append(sun)
@@ -151,7 +153,7 @@ func _build_sector_geometry() -> void:
 	floor_mesh.name = "Floor"
 	var floor_box := BoxMesh.new()
 	floor_box.size = Vector3(arena_size, 0.8, arena_size)
-	floor_box.material = _mat(Color("#071322"), 0.45, 0.32, Color("#08446a"), 0.82)
+	floor_box.material = _mat(Color("#1b1511"), 0.0, 0.94, Color("#0d0907"), 0.08)
 	floor_mesh.mesh = floor_box
 	floor_mesh.position.y = -0.4
 	ground.add_child(floor_mesh)
@@ -160,7 +162,7 @@ func _build_sector_geometry() -> void:
 	var floor_outline := MeshInstance3D.new()
 	var outline_box := BoxMesh.new()
 	outline_box.size = Vector3(arena_size - 2.0, 0.05, arena_size - 2.0)
-	outline_box.material = _mat(Color("#0a2132"), 0.05, 0.2, Color("#2cddff"), 1.8)
+	outline_box.material = _mat(Color("#28221b"), 0.05, 0.26, Color("#6f5a3f"), 0.34)
 	floor_outline.mesh = outline_box
 	floor_outline.position.y = 0.015
 	arena_root.add_child(floor_outline)
@@ -184,7 +186,7 @@ func _build_sector_geometry() -> void:
 			continue
 		_create_obstacle(p, rng.randf_range(0.8, 2.4), rng.randf_range(1.8, 6.5), i % 3 == 0)
 
-	for i in range(28):
+	for i in range(12):
 		var angle := rng.randf_range(0.0, TAU)
 		var distance := rng.randf_range(8.0, 35.0)
 		_create_neon_marker(Vector3(cos(angle) * distance, 0.025, sin(angle) * distance))
@@ -196,7 +198,7 @@ func _create_wall(pos: Vector3, size: Vector3) -> void:
 	var mesh := MeshInstance3D.new()
 	var box := BoxMesh.new()
 	box.size = size
-	box.material = _mat(Color("#0c182a"), 0.32, 0.38, Color("#183d62"), 0.75)
+	box.material = _mat(Color("#1a1917"), 0.60, 0.58, Color("#3e382f"), 0.18)
 	mesh.mesh = box
 	body.add_child(mesh)
 	var collider := CollisionShape3D.new()
@@ -215,7 +217,7 @@ func _create_obstacle(pos: Vector3, radius: float, height: float, emissive: bool
 	cyl.top_radius = radius * 0.72
 	cyl.bottom_radius = radius
 	cyl.height = height
-	cyl.material = _mat(Color("#14263a"), 0.48, 0.3, Color("#2a567c") if not emissive else Color("#734cff"), 0.85 if not emissive else 1.8)
+	cyl.material = _mat(Color("#292724"), 0.72, 0.48, Color("#625341") if not emissive else Color("#8a704f"), 0.22 if not emissive else 0.34)
 	mesh.mesh = cyl
 	body.add_child(mesh)
 	lod_nodes.append(mesh)
@@ -223,7 +225,7 @@ func _create_obstacle(pos: Vector3, radius: float, height: float, emissive: bool
 	var torus := TorusMesh.new()
 	torus.inner_radius = radius * 0.72
 	torus.outer_radius = radius * 0.82
-	torus.material = _mat(Color("#4de4ff") if not emissive else Color("#ff5caf"), 0.15, 0.18, Color("#4de4ff") if not emissive else Color("#ff4eaa"), 2.1)
+	torus.material = _mat(Color("#9a7f58") if not emissive else Color("#7b6750"), 0.52, 0.32, Color("#9a7f58") if not emissive else Color("#8a6c4e"), 0.42)
 	ring.mesh = torus
 	ring.position.y = height * 0.47
 	body.add_child(ring)
@@ -239,7 +241,7 @@ func _create_neon_marker(pos: Vector3) -> void:
 	var marker := MeshInstance3D.new()
 	var box := BoxMesh.new()
 	box.size = Vector3(0.16, 0.035, rng.randf_range(0.8, 1.8))
-	box.material = _mat(Color("#38d9ff"), 0.05, 0.16, Color("#38d9ff"), 2.2)
+	box.material = _mat(Color("#8f7450"), 0.12, 0.48, Color("#8f7450"), 0.36)
 	marker.mesh = box
 	marker.position = pos
 	marker.rotation.y = rng.randf_range(0.0, TAU)
@@ -255,7 +257,7 @@ func _build_landmarks() -> void:
 			var beam := MeshInstance3D.new()
 			var box := BoxMesh.new()
 			box.size = Vector3(0.42, 9.0, 0.42)
-			box.material = _mat(Color("#1a2b41"), 0.45, 0.25, Color("#744fff"), 1.4)
+			box.material = _mat(Color("#30302d"), 0.68, 0.46, Color("#836c4e"), 0.36)
 			beam.mesh = box
 			beam.position = Vector3((j - 1.5) * 2.2, 4.5, 0)
 			tower.add_child(beam)
@@ -265,7 +267,7 @@ func _build_stage_gate() -> void:
 	var gate := MeshInstance3D.new()
 	var mesh := BoxMesh.new()
 	mesh.size = Vector3(12.0, 0.3, 0.7)
-	mesh.material = _mat(Color("#172b44"), 0.5, 0.2, Color("#5eeaff"), 2.0)
+	mesh.material = _mat(Color("#292723"), 0.72, 0.38, Color("#a08055"), 0.42)
 	gate.mesh = mesh
 	gate.position = Vector3(0, 5.0, -34.0)
 	arena_root.add_child(gate)
@@ -353,6 +355,7 @@ func _build_ui() -> void:
 	pause_button = _button("Ⅱ", Vector2(70, 54), 22)
 	pause_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	pause_button.position = Vector2(-84, 54)
+	pause_button.z_index = 120
 	pause_button.pressed.connect(_toggle_pause)
 	layer.add_child(pause_button)
 
@@ -362,10 +365,10 @@ func _build_ui() -> void:
 	menu_box.alignment = BoxContainer.ALIGNMENT_CENTER
 	menu_box.add_theme_constant_override("separation", 14)
 	menu_panel.add_child(menu_box)
-	var title := _label("NEON FRONTIER", 58)
+	var title := _label("FRONTIER // ZERO", 58)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	menu_box.add_child(title)
-	var subtitle := _label("ANDROID CAMPAIGN  •  3 STAGES  •  COMBAT SURVIVAL", 18)
+	var subtitle := _label("SINGLE-PLAYER 3D CAMPAIGN  •  3 SECTORS  •  SURVIVAL", 18)
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	menu_box.add_child(subtitle)
 	var best := _label("BEST SCORE  %06d" % best_score, 17)
@@ -382,7 +385,7 @@ func _build_ui() -> void:
 		var continue_button := _button("CONTINUE", Vector2(300, 56), 20)
 		continue_button.pressed.connect(func(): _begin_run(true))
 		menu_box.add_child(continue_button)
-	var info := _label("Move  •  FIRE  •  BOOST    |    Auto-save at every stage", 16)
+	var info := _label("MOVE  •  FIRE  •  BOOST    |    AUTO-SAVE", 16)
 	info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	menu_box.add_child(info)
 	layer.add_child(menu_panel)
@@ -410,34 +413,69 @@ func _build_ui() -> void:
 	layer.add_child(pause_panel)
 	pause_panel.hide()
 
-	_create_touch_controls(layer)
+	touch_layer = CanvasLayer.new()
+	touch_layer.name = "TouchControls"
+	touch_layer.layer = 10
+	add_child(touch_layer)
 
-func _create_touch_controls(layer: CanvasLayer) -> void:
+	touch_root = Control.new()
+	touch_root.name = "TouchRoot"
+	touch_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	touch_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	touch_root.z_index = 100
+	touch_layer.add_child(touch_root)
+
+	_create_touch_controls()
+
+func _create_touch_controls() -> void:
+	touch_controls.clear()
+
 	joystick = JOYSTICK_SCRIPT.new()
-	joystick.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	joystick.position = Vector2(24, -236)
-	joystick.custom_minimum_size = Vector2(210, 210)
-	joystick.size = joystick.custom_minimum_size
-	joystick.value_changed.connect(func(value: Vector2): player.set_move_input(value))
-	joystick.released.connect(func(): player.clear_move_input())
-	layer.add_child(joystick)
+	joystick.name = "MoveJoystick"
+	joystick.anchor_left = 0.0
+	joystick.anchor_right = 0.0
+	joystick.anchor_top = 1.0
+	joystick.anchor_bottom = 1.0
+	joystick.offset_left = 30.0
+	joystick.offset_right = 246.0
+	joystick.offset_top = -246.0
+	joystick.offset_bottom = -30.0
+	joystick.size = Vector2(216, 216)
+	joystick.custom_minimum_size = Vector2(216, 216)
+	joystick.mouse_filter = Control.MOUSE_FILTER_STOP
+	touch_root.add_child(joystick)
 	touch_controls.append(joystick)
 
-	boost_button = _button("BOOST", Vector2(132, 62), 17)
-	fire_button = _button("FIRE", Vector2(132, 96), 22)
-	boost_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	fire_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	boost_button.position = Vector2(-158, -98)
-	fire_button.position = Vector2(-158, -214)
-	layer.add_child(boost_button)
-	layer.add_child(fire_button)
-	touch_controls.append(boost_button)
+	fire_button = _button("FIRE", Vector2(168, 104), 23)
+	_place_touch_button(fire_button, -210.0, -148.0, -38.0, -44.0)
+	_configure_touch_button(fire_button, Color("#2c2926"), Color("#d1a66f"))
+	touch_root.add_child(fire_button)
 	touch_controls.append(fire_button)
+
+	boost_button = _button("BOOST", Vector2(168, 64), 18)
+	_place_touch_button(boost_button, -210.0, -74.0, -38.0, -44.0)
+	_configure_touch_button(boost_button, Color("#242423"), Color("#8d8170"))
+	touch_root.add_child(boost_button)
+	touch_controls.append(boost_button)
 
 	boost_button.pressed.connect(_boost_pressed)
 	fire_button.button_down.connect(func(): player.set_fire_input(true))
 	fire_button.button_up.connect(func(): player.set_fire_input(false))
-	_set_touch_controls_visible(DisplayServer.is_touchscreen_available() or OS.get_name() == "Android")
+	_set_touch_controls_visible(false)
+
+func _place_touch_button(button: Button, left: float, top: float, right: float, bottom: float) -> void:
+	button.anchor_left = 1.0
+	button.anchor_right = 1.0
+	button.anchor_top = 1.0
+	button.anchor_bottom = 1.0
+	button.offset_left = left
+	button.offset_right = right
+	button.offset_top = top
+	button.offset_bottom = bottom
+	button.position = Vector2.ZERO
+	button.size = Vector2(right - left, bottom - top)
+	button.z_index = 101
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
 
 func _begin_run(continue_run: bool) -> void:
 	if continue_run:
@@ -457,6 +495,7 @@ func _begin_run(continue_run: bool) -> void:
 	pickup_timer = 2.5
 	get_tree().paused = false
 	menu_panel.hide()
+	_set_touch_controls_visible(true)
 	pause_panel.hide()
 	player.reset_for_run()
 	player.position = spawn_position
@@ -468,6 +507,7 @@ func _begin_run(continue_run: bool) -> void:
 	_update_hud()
 
 func _show_menu() -> void:
+	_set_touch_controls_visible(false)
 	running = false
 	game_over = false
 	get_tree().paused = false
@@ -483,11 +523,7 @@ func _show_menu() -> void:
 
 func _rebuild_stage(stage_id: int) -> void:
 	arena_root.rotation.y = float(stage_id - 1) * 0.12
-	var tint: Color = [
-		Color("#38d9ff"),
-		Color("#8c65ff"),
-		Color("#ff4f9a")
-	][clamp(stage_id - 1, 0, 2)]
+	var tint := Color("#b79a70")
 	for light in dynamic_lights:
 		if is_instance_valid(light) and light is OmniLight3D:
 			light.light_color = tint
@@ -543,12 +579,12 @@ func _spawn_enemy(kind: String, difficulty: float, boss: bool) -> void:
 func _on_enemy_attack(origin: Vector3, direction: Vector3, damage: float) -> void:
 	if game_over:
 		return
-	_spawn_projectile(origin, direction, false, damage, 10.0, 6.5, Color("#ff4a79"))
+	_spawn_projectile(origin, direction, false, damage, 10.0, 6.5, Color("#9d6652"))
 
 func _on_player_fire(origin: Vector3, direction: Vector3, damage: float) -> void:
 	if not running or game_over or get_tree().paused:
 		return
-	_spawn_projectile(origin, direction, true, damage, 26.0, 4.2, Color("#55eaff"))
+	_spawn_projectile(origin, direction, true, damage, 26.0, 4.2, Color("#d0bc95"))
 	score = max(score, 0)
 	_play_sound("shoot")
 
@@ -581,7 +617,7 @@ func _update_projectiles(delta: float) -> void:
 					continue
 				if shot.global_position.distance_to(enemy.global_position + Vector3.UP * 0.75) < shot.hit_radius:
 					enemy.take_damage(shot.damage)
-					_spawn_hit_fx(shot.global_position, Color("#67eaff"), 1.0)
+					_spawn_hit_fx(shot.global_position, Color("#d4c39f"), 1.0)
 					_play_sound("hit")
 					shot.queue_free()
 					projectiles.remove_at(i)
@@ -591,7 +627,7 @@ func _update_projectiles(delta: float) -> void:
 				continue
 		elif is_instance_valid(player) and shot.global_position.distance_to(player.global_position + Vector3.UP * 0.8) < shot.hit_radius:
 			player.take_damage(shot.damage)
-			_spawn_hit_fx(shot.global_position, Color("#ff5b85"), 0.9)
+			_spawn_hit_fx(shot.global_position, Color("#ad7560"), 0.9)
 			_play_sound("hurt")
 			shot.queue_free()
 			projectiles.remove_at(i)
@@ -607,14 +643,14 @@ func _spawn_pickup() -> void:
 	var sphere := SphereMesh.new()
 	sphere.radius = 0.42
 	sphere.height = 0.84
-	sphere.material = _mat(Color("#48ffd2"), 0.05, 0.12, Color("#2effd1"), 3.5)
+	sphere.material = _mat(Color("#c7b58e"), 0.05, 0.12, Color("#a88f68"), 3.5)
 	mesh.mesh = sphere
 	orb.add_child(mesh)
 	var ring := MeshInstance3D.new()
 	var torus := TorusMesh.new()
 	torus.inner_radius = 0.5
 	torus.outer_radius = 0.58
-	torus.material = _mat(Color("#c1fff4"), 0.05, 0.08, Color("#3affd9"), 2.7)
+	torus.material = _mat(Color("#ddd2bd"), 0.05, 0.08, Color("#b6a07a"), 2.7)
 	ring.mesh = torus
 	ring.rotation_degrees.x = 90
 	orb.add_child(ring)
@@ -634,7 +670,7 @@ func _update_pickups(delta: float) -> void:
 			score += 90
 			player.heal(11.0)
 			player.restore_energy(28.0)
-			_spawn_hit_fx(p.global_position, Color("#4effd4"), 1.2)
+			_spawn_hit_fx(p.global_position, Color("#d0bc95"), 1.2)
 			_play_sound("pickup")
 			p.queue_free()
 			pickups.remove_at(i)
@@ -691,7 +727,7 @@ func _on_enemy_defeated(enemy: Node3D, boss: bool) -> void:
 		objective_label.text = "OBJECTIVE COMPLETE  •  CAMPAIGN CLEAR"
 	else:
 		score += reward
-	_spawn_hit_fx(enemy.global_position + Vector3.UP * 0.7, Color("#ff5fa5") if not boss else Color("#ffd466"), 2.8 if boss else 1.5)
+	_spawn_hit_fx(enemy.global_position + Vector3.UP * 0.7, Color("#a8745c") if not boss else Color("#d2bf98"), 2.8 if boss else 1.5)
 	_play_sound("explode" if boss else "hit")
 
 	if boss:
@@ -739,7 +775,7 @@ func _on_boost() -> void:
 	if not running or game_over:
 		return
 	message_label.text = "BOOST ENGAGED"
-	_spawn_hit_fx(player.global_position, Color("#63ecff"), 1.5)
+	_spawn_hit_fx(player.global_position, Color("#d0bc95"), 1.5)
 	_play_sound("dash")
 	var tween := create_tween()
 	tween.tween_interval(0.45)
@@ -756,6 +792,7 @@ func _toggle_pause() -> void:
 	if not running or game_over:
 		return
 	get_tree().paused = not get_tree().paused
+	_set_touch_controls_visible(not get_tree().paused)
 	pause_panel.visible = get_tree().paused
 	message_label.text = ""
 	_play_sound("hit" if not get_tree().paused else "stage")
@@ -872,9 +909,8 @@ func _update_hud() -> void:
 		energy_bar.value = player.energy
 	if pause_button:
 		pause_button.visible = running and not game_over
-	if running and not game_over and not get_tree().paused:
-		for b in touch_controls:
-			b.show()
+	if running and not game_over:
+		_set_touch_controls_visible(not get_tree().paused)
 
 func _play_sound(kind: String) -> void:
 	if is_instance_valid(audio_manager) and audio_manager.has_method("play_sound"):
@@ -909,10 +945,10 @@ func _button(text_value: String, size: Vector2, font_size: int) -> Button:
 
 func _mat(color: Color, metallic: float, roughness: float, emission: Color, energy: float) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
-	material.albedo_color = color
-	material.metallic = metallic
-	material.roughness = roughness
-	material.emission_enabled = true
-	material.emission = emission
-	material.emission_energy_multiplier = energy
+	material.albedo_color = color.lerp(Color("#6b665d"), 0.44)
+	material.metallic = min(metallic, 0.82)
+	material.roughness = max(roughness, 0.42)
+	material.emission_enabled = energy > 0.10
+	material.emission = emission.lerp(Color("#9b7a50"), 0.48)
+	material.emission_energy_multiplier = min(energy * 0.34, 0.58)
 	return material
