@@ -1,5 +1,7 @@
 extends CharacterBody3D
 
+const BAKED_CHARACTER_SCRIPT = preload("res://baked_character.gd")
+
 signal defeated(enemy: Node3D, boss: bool)
 signal attack_requested(origin: Vector3, direction: Vector3, damage: float)
 
@@ -56,64 +58,22 @@ func _build_visual() -> void:
 	visual_root.name = "Visual"
 	add_child(visual_root)
 
-	var packed: PackedScene = null
-	if OS.get_name() == "Android":
-		packed = load("res://assets/worker_human.glb") as PackedScene
-	if packed != null:
-		var model := packed.instantiate() as Node3D
-		model.name = "CharacterModel"
-		model.scale = Vector3.ONE * (1.10 if enemy_type == "juggernaut" else 1.03)
-		visual_root.add_child(model)
-	else:
-		_build_fallback_humanoid()
+	var tint: Color = Color("#777168")
+	if enemy_type == "juggernaut":
+		tint = Color("#635b50")
+	elif enemy_type == "striker":
+		tint = Color("#858078")
+	var model_scale: float = 1.10 if enemy_type == "juggernaut" else 1.03
+	var model: Node3D = BAKED_CHARACTER_SCRIPT.create("res://assets/worker_human.meshbin", tint, model_scale)
+	visual_root.add_child(model)
 
-	var collider := CollisionShape3D.new()
-	var shape := CapsuleShape3D.new()
+	var collider: CollisionShape3D = CollisionShape3D.new()
+	var shape: CapsuleShape3D = CapsuleShape3D.new()
 	shape.radius = 0.50 if enemy_type != "juggernaut" else 0.66
 	shape.height = 1.80 if enemy_type != "juggernaut" else 2.20
 	collider.shape = shape
 	collider.position.y = 0.90 if enemy_type != "juggernaut" else 1.10
 	add_child(collider)
-
-
-func _build_fallback_humanoid() -> void:
-	var torso_mesh := CapsuleMesh.new()
-	torso_mesh.radius = 0.36
-	torso_mesh.height = 1.0
-	torso_mesh.material = _mat(Color("#4a4741"), 0.30, 0.56, Color("#80684b"), 0.05)
-	var torso := MeshInstance3D.new()
-	torso.mesh = torso_mesh
-	torso.position.y = 1.04
-	visual_root.add_child(torso)
-
-	var head_mesh := SphereMesh.new()
-	head_mesh.radius = 0.24
-	head_mesh.height = 0.48
-	head_mesh.material = _mat(Color("#575149"), 0.25, 0.52, Color("#80684b"), 0.04)
-	var head := MeshInstance3D.new()
-	head.mesh = head_mesh
-	head.position.y = 1.80
-	visual_root.add_child(head)
-
-	for x in [-0.44, 0.44]:
-		var limb_mesh := CapsuleMesh.new()
-		limb_mesh.radius = 0.12
-		limb_mesh.height = 0.82
-		limb_mesh.material = _mat(Color("#34312c"), 0.28, 0.60, Color("#715c43"), 0.03)
-		var limb := MeshInstance3D.new()
-		limb.mesh = limb_mesh
-		limb.position = Vector3(x, 0.98, 0.0)
-		limb.rotation_degrees.z = -x * 9.0
-		visual_root.add_child(limb)
-
-	var pack_mesh := CapsuleMesh.new()
-	pack_mesh.radius = 0.20
-	pack_mesh.height = 0.70
-	pack_mesh.material = _mat(Color("#282622"), 0.18, 0.66, Color("#66533d"), 0.02)
-	var pack := MeshInstance3D.new()
-	pack.mesh = pack_mesh
-	pack.position = Vector3(0, 1.04, 0.34)
-	visual_root.add_child(pack)
 
 
 func _physics_process(delta: float) -> void:
