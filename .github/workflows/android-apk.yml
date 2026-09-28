@@ -59,12 +59,18 @@ jobs:
           GODOT_VERSION: "4.7.2"
         run: |
           set -Eeuo pipefail
-          mkdir -p "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable.mono"
+          template_dir="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable.mono"
+          extract_dir="$RUNNER_TEMP/godot/export_templates"
+          mkdir -p "$template_dir" "$extract_dir"
           cd "$RUNNER_TEMP/godot"
           curl -fsSLO "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_mono_export_templates.tpz"
-          unzip -q -o "Godot_v${GODOT_VERSION}-stable_mono_export_templates.tpz" -d "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable.mono"
-          test -f "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/templates/android_debug.apk"
-          test -f "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/templates/android_release.apk"
+          unzip -q -o "Godot_v${GODOT_VERSION}-stable_mono_export_templates.tpz" -d "$extract_dir"
+          test -f "$extract_dir/templates/android_debug.apk"
+          test -f "$extract_dir/templates/android_release.apk"
+          cp "$extract_dir/templates/android_debug.apk" "$template_dir/android_debug.apk"
+          cp "$extract_dir/templates/android_release.apk" "$template_dir/android_release.apk"
+          test -f "$template_dir/android_debug.apk"
+          test -f "$template_dir/android_release.apk"
 
       - name: Create Android debug keystore
         run: |
