@@ -78,11 +78,16 @@ jobs:
           mkdir -p "$HOME/.android"
           keytool -genkeypair -v             -keystore "$HOME/.android/debug.keystore"             -storepass android             -alias androiddebugkey             -keypass android             -keyalg RSA -keysize 2048 -validity 10000             -dname "CN=Android Debug,O=Android,C=US"
 
+      - name: Import Godot project
+        run: |
+          set -Eeuo pipefail
+          "$GODOT_BIN" --headless --editor --path . --quit-after 120 2>&1 | tee "$RUNNER_TEMP/godot-import.log"
+
       - name: Validate Godot project
         run: |
           set -Eeuo pipefail
           "$GODOT_BIN" --headless --path . --quit-after 120 2>&1 | tee "$RUNNER_TEMP/godot-validate.log"
-          ! grep -Eiq "SCRIPT ERROR|PARSE ERROR|ERROR|FAILED|EXCEPTION|FATAL|CRITICAL|WARNING|DEPRECATED" "$RUNNER_TEMP/godot-validate.log"
+          ! grep -Eiq "SCRIPT ERROR|PARSE ERROR|ERROR|FAILED|EXCEPTION|FATAL|CRITICAL|WARNING|DEPRECATED" "$RUNNER_TEMP/godot-import.log" "$RUNNER_TEMP/godot-validate.log"
 
       - name: Export debug APK
         env:
@@ -101,9 +106,10 @@ jobs:
       - name: Scan Godot logs
         run: |
           set -Eeuo pipefail
+          cat "$RUNNER_TEMP/godot-import.log"
           cat "$RUNNER_TEMP/godot-validate.log"
           cat "$RUNNER_TEMP/godot-export.log"
-          if grep -Eiq "ERROR|FAILED|EXCEPTION|FATAL|CRITICAL|WARNING|DEPRECATED" "$RUNNER_TEMP/godot-validate.log" "$RUNNER_TEMP/godot-export.log"; then
+          if grep -Eiq "ERROR|FAILED|EXCEPTION|FATAL|CRITICAL|WARNING|DEPRECATED" "$RUNNER_TEMP/godot-import.log" "$RUNNER_TEMP/godot-validate.log" "$RUNNER_TEMP/godot-export.log"; then
             echo "Unexpected Godot log marker found."
             exit 1
           fi
