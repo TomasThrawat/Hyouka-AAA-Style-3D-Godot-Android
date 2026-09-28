@@ -25,7 +25,6 @@ var menu_panel: PanelContainer
 var pause_button: Button
 var boost_button: Button
 var touch_buttons: Array[Button] = []
-var trail_particles: GPUParticles3D
 
 func _ready() -> void:
 	rng.randomize()
@@ -185,7 +184,6 @@ func _create_player() -> void:
 	particle_mesh.material = _mat(Color("#4ceaff"), 0.0, 0.15, Color("#4ceaff"), 3.0)
 	trail.draw_pass_1 = particle_mesh
 	player.add_child(trail)
-	trail_particles = trail
 	player.boost_requested.connect(_on_boost)
 
 func _create_camera() -> void:
@@ -262,16 +260,21 @@ func _build_ui() -> void:
 	_create_touch_controls(layer)
 
 func _create_touch_controls(layer: CanvasLayer) -> void:
-	left_button := _button("◀", Vector2(70, 70))
-	right_button := _button("▶", Vector2(70, 70))
-	up_button := _button("▲", Vector2(70, 70))
-	down_button := _button("▼", Vector2(70, 70))
-	boost_button := _button("BOOST", Vector2(110, 82))
-	left_button.position = Vector2(24, 570)
-	down_button.position = Vector2(102, 648)
-	up_button.position = Vector2(102, 492)
-	right_button.position = Vector2(180, 570)
-	boost_button.position = Vector2(1060, 592)
+	left_button = _button("◀", Vector2(70, 70))
+	right_button = _button("▶", Vector2(70, 70))
+	up_button = _button("▲", Vector2(70, 70))
+	down_button = _button("▼", Vector2(70, 70))
+	boost_button = _button("BOOST", Vector2(110, 82))
+	left_button.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	right_button.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	up_button.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	down_button.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	boost_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	left_button.position = Vector2(24, -110)
+	down_button.position = Vector2(102, -32)
+	up_button.position = Vector2(102, -188)
+	right_button.position = Vector2(180, -110)
+	boost_button.position = Vector2(-134, -110)
 	for b in [left_button, down_button, up_button, right_button, boost_button]:
 		layer.add_child(b)
 		touch_buttons.append(b)
@@ -285,10 +288,6 @@ func _create_touch_controls(layer: CanvasLayer) -> void:
 
 func _boost_pressed() -> void:
 	if running and not game_over and not get_tree().paused and player:
-		player.boost()
-
-func _boost_keyboard() -> void:
-	if running and not game_over and not get_tree().paused and player and Input.is_key_pressed(KEY_SHIFT):
 		player.boost()
 
 func _start_game() -> void:
@@ -403,10 +402,6 @@ func _update_hud() -> void:
 			b.show()
 	if health_bar:
 		health_bar.value = player.health if player else 100.0
-
-func _input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and event.keycode == KEY_SHIFT:
-		_boost_pressed()
 
 func _on_player_health_changed(value: float) -> void:
 	if health_bar:
