@@ -37,7 +37,10 @@ func _ready() -> void:
 	_build_visual()
 
 func _build_visual() -> void:
-	var packed := preload("res://assets/player_human.glb") as PackedScene
+	var resource: Resource = load("res://assets/player_human.glb")
+	if not resource is PackedScene:
+		return
+	var packed: PackedScene = resource as PackedScene
 	var model := packed.instantiate() as Node3D
 	model.name = "CharacterModel"
 	model.position = Vector3.ZERO
