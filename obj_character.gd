@@ -28,8 +28,8 @@ static func _load_obj(path: String, target_height: float) -> ArrayMesh:
 	var source := FileAccess.get_file_as_string(path)
 	var raw_vertices := PackedVector3Array()
 	var triangles := PackedInt32Array()
-	var min_v := Vector3(INF, INF, INF)
-	var max_v := Vector3(-INF, -INF, -INF)
+	var min_v: Vector3 = Vector3(INF, INF, INF)
+	var max_v: Vector3 = Vector3(-INF, -INF, -INF)
 
 	for line in source.split("
 "):
@@ -59,17 +59,17 @@ static func _load_obj(path: String, target_height: float) -> ArrayMesh:
 					triangles.append(face[k])
 					triangles.append(face[k + 1])
 
-	var origin := Vector3((min_v.x + max_v.x) * 0.5, min_v.y, (min_v.z + max_v.z) * 0.5)
-	var height := max(0.001, max_v.y - min_v.y)
-	var unit_scale := target_height / height
-	var vertices := PackedVector3Array()
-	var normals := PackedVector3Array()
+	var origin: Vector3 = Vector3((min_v.x + max_v.x) * 0.5, min_v.y, (min_v.z + max_v.z) * 0.5)
+	var height: float = max(0.001, max_v.y - min_v.y)
+	var unit_scale: float = target_height / height
+	var vertices: PackedVector3Array = PackedVector3Array()
+	var normals: PackedVector3Array = PackedVector3Array()
 
 	for i in range(0, triangles.size(), 3):
-		var a := (raw_vertices[triangles[i]] - origin) * unit_scale
-		var b := (raw_vertices[triangles[i + 1]] - origin) * unit_scale
-		var c := (raw_vertices[triangles[i + 2]] - origin) * unit_scale
-		var n := (b - a).cross(c - a)
+		var a: Vector3 = (raw_vertices[triangles[i]] - origin) * unit_scale
+		var b: Vector3 = (raw_vertices[triangles[i + 1]] - origin) * unit_scale
+		var c: Vector3 = (raw_vertices[triangles[i + 2]] - origin) * unit_scale
+		var n: Vector3 = (b - a).cross(c - a)
 		if n.length_squared() < 0.000001:
 			n = Vector3.UP
 		else:
@@ -85,6 +85,6 @@ static func _load_obj(path: String, target_height: float) -> ArrayMesh:
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = vertices
 	arrays[Mesh.ARRAY_NORMAL] = normals
-	var mesh := ArrayMesh.new()
+	var mesh: ArrayMesh = ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	return mesh
