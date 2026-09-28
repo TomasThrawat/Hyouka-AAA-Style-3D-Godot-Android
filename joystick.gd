@@ -40,8 +40,8 @@ func _draw() -> void:
 
 func _pointer_to_local(viewport_position: Vector2) -> Vector2:
 	var rect := get_global_rect()
-	var scale_x := size.x / max(rect.size.x, 1.0)
-	var scale_y := size.y / max(rect.size.y, 1.0)
+	var scale_x: float = size.x / max(rect.size.x, 1.0)
+	var scale_y: float = size.y / max(rect.size.y, 1.0)
 	return Vector2(
 		(viewport_position.x - rect.position.x) * scale_x,
 		(viewport_position.y - rect.position.y) * scale_y
