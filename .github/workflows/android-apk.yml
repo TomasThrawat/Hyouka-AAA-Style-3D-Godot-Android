@@ -13,6 +13,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
+      - name: Configure Git defaults
+        run: git config --global init.defaultBranch main
+
       - name: Checkout
         uses: actions/checkout@v7
 
@@ -129,7 +132,11 @@ jobs:
           EMULATOR="$ANDROID_HOME/emulator/emulator"
           ADB="$ANDROID_HOME/platform-tools/adb"
 
+          # sdkmanager may close stdin after accepting licenses, which makes `yes` exit via SIGPIPE (141).
+          # Keep the pipeline non-fatal when sdkmanager itself completes successfully.
+          set +o pipefail
           yes | "$SDKMANAGER" "platform-tools" "platforms;android-35" "system-images;android-35;google_apis;x86_64" >/dev/null
+          set -o pipefail
           echo "no" | "$AVDMANAGER" create avd --force --name hyouka_api35 --package "system-images;android-35;google_apis;x86_64" --device "pixel_6"
           "$EMULATOR" -avd hyouka_api35 -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot >/tmp/hyouka-emulator.log 2>&1 &
           EMULATOR_PID=$!
