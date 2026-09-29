@@ -44,6 +44,7 @@ func _run() -> void:
 	await create_timer(1.0).timeout
 
 	print("GUI TEST: menu")
+	_check(game.start_button != null, "START GAME button exists")
 	_check(game.fire_button != null, "FIRE button exists")
 	_check(game.boost_button != null, "BOOST button exists")
 	_check(game.tactical_button != null, "TACTICAL button exists")
@@ -52,6 +53,11 @@ func _run() -> void:
 
 	await _capture(game, "build/gui/menu.png")
 	_check(game.running == false, "menu starts stopped")
+
+	print("GUI TEST: START GAME")
+	await _click_control(game.start_button)
+	await create_timer(0.8).timeout
+	_check(game.running, "visual START GAME click starts game")
 
 	print("GUI TEST: FIRE")
 	await _click_control(game.fire_button)
