@@ -67,7 +67,7 @@ func _run() -> void:
 
 	game.stage = 3
 	game.wave = 3
-	game.transition_lock = false
+
 	game.boss_active = false
 	game._start_wave()
 	await process_frame
