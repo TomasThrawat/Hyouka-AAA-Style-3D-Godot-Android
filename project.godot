@@ -8,7 +8,6 @@ config/version="3.0.0"
 config/icon="res://icon.svg"
 
 [autoload]
-CIGuiSmoke="*res://ci_gui_smoke.gd"
 
 [display]
 window/size/viewport_width=1280
