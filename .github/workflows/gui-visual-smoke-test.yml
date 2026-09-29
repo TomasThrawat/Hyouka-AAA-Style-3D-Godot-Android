@@ -48,6 +48,12 @@ jobs:
           sed -i '/^\[rendering\]/i display/window/vsync/vsync_mode=0' "$RUNNER_TEMP/gui-project/project.godot"
           grep -F 'display/window/vsync/vsync_mode=0' "$RUNNER_TEMP/gui-project/project.godot"
 
+      - name: Import Godot project for GUI test
+        working-directory: ${{ runner.temp }}/gui-project
+        run: |
+          set -Eeuo pipefail
+          "$GODOT_BIN" --headless --editor --audio-driver Dummy             --path . --quit-after 120             2>&1 | tee "$RUNNER_TEMP/godot-gui-import.log"
+
       - name: Run Godot GUI smoke test
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
@@ -68,6 +74,7 @@ jobs:
             ${{ runner.temp }}/gui-project/build/gui/running.png
             ${{ runner.temp }}/gui-project/build/gui/paused.png
             ${{ runner.temp }}/godot-gui.log
+            ${{ runner.temp }}/godot-gui-import.log
           if-no-files-found: error
           retention-days: 7
 
@@ -88,7 +95,7 @@ jobs:
             exit 1
           fi
 
-          if grep -Eiq 'SCRIPT ERROR|PARSE ERROR|EXCEPTION|FATAL|CRITICAL|All audio drivers failed|ERROR:' "$RUNNER_TEMP/godot-gui.log"; then
+          if grep -Eiq 'SCRIPT ERROR|PARSE ERROR|EXCEPTION|FATAL|CRITICAL|All audio drivers failed|ERROR:' "$RUNNER_TEMP/godot-gui.log" "$RUNNER_TEMP/godot-gui-import.log"; then
             echo "Unexpected Godot runtime/error marker found."
             exit 1
           fi
