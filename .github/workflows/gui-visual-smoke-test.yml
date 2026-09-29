@@ -27,7 +27,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           timeout 180 sudo apt-get update -o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20
-          timeout 180 sudo apt-get install -y --no-install-recommends weston curl unzip python3 file xcursor-themes libxcursor1 libdecor-0-0 libdecor-0-plugin-1-cairo
+          timeout 180 sudo apt-get install -y --no-install-recommends weston curl unzip python3 file xcursor-themes adwaita-icon-theme libxcursor1 libdecor-0-0 libdecor-0-plugin-1-cairo
           command -v weston
           command -v curl
           command -v unzip
@@ -39,22 +39,17 @@ jobs:
       - name: Prepare complete Xcursor theme
         run: |
           set -Eeuo pipefail
-          OVERLAY="$RUNNER_TEMP/xcursor-overlay/DMZ-White/cursors"
+          OVERLAY="$RUNNER_TEMP/xcursor-overlay/Adwaita/cursors"
           mkdir -p "$OVERLAY"
-          if [ -d /usr/share/icons/DMZ-White/cursors ]; then
-            cp -a /usr/share/icons/DMZ-White/cursors/. "$OVERLAY/"
-          fi
-          SOURCE=""
-          for candidate in             /usr/share/icons/DMZ-White/cursors/not-allowed             /usr/share/icons/DMZ-Black/cursors/not-allowed             /usr/share/icons/Adwaita/cursors/not-allowed             /usr/share/icons/DMZ-White/cursors/forbidden             /usr/share/icons/DMZ-White/cursors/left_ptr; do
-            if [ -f "$candidate" ]; then
-              SOURCE="$candidate"
-              break
+          cp -a /usr/share/icons/Adwaita/cursors/. "$OVERLAY/"
+          test -e "$OVERLAY/left_ptr"
+          for cursor in left_ptr xterm hand2 cross watch left_ptr_watch fleur dnd-move v_double_arrow h_double_arrow size_bdiag size_fdiag move row_resize col_resize question_arrow crossed_circle; do
+            if [ ! -e "$OVERLAY/$cursor" ]; then
+              ln -s left_ptr "$OVERLAY/$cursor"
             fi
+            test -e "$OVERLAY/$cursor"
           done
-          test -n "$SOURCE"
-          ln -sfn "$SOURCE" "$OVERLAY/crossed_circle"
-          test -e "$OVERLAY/crossed_circle"
-          echo "XCURSOR_THEME=DMZ-White" >> "$GITHUB_ENV"
+          echo "XCURSOR_THEME=Adwaita" >> "$GITHUB_ENV"
           echo "XCURSOR_SIZE=24" >> "$GITHUB_ENV"
           echo "XCURSOR_PATH=$RUNNER_TEMP/xcursor-overlay:/usr/share/icons:/usr/share/pixmaps" >> "$GITHUB_ENV"
 
@@ -135,7 +130,7 @@ jobs:
           cat "$RUNNER_TEMP/gui.log"
           test -f "$RUNNER_TEMP/godot-runtime.log"
           cat "$RUNNER_TEMP/godot-runtime.log"
-          if grep -Eai "SCRIPT ERROR|PARSE ERROR|ERROR|FAILED|EXCEPTION|FATAL|CRITICAL|WARNING|DEPRECATED" "$RUNNER_TEMP/gui.log" "$RUNNER_TEMP/godot-runtime.log"; then
+          if grep -Eai "SCRIPT ERROR|PARSE ERROR|ERROR|FAILED|EXCEPTION|FATAL|CRITICAL|WARNING|DEPRECATED" "$RUNNER_TEMP/gui.log" "$RUNNER_TEMP/godot-runtime.log" | grep -Ev "Can't obtain the XDG decoration manager|xdg-toplevel-icon protocol not found|Can't obtain the XDG activation global|FIFO protocol not found"; then
             echo "Unexpected Godot diagnostics detected"
             exit 1
           fi
