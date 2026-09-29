@@ -2,6 +2,9 @@ extends SceneTree
 
 var failures: Array[String] = []
 
+func _init() -> void:
+	call_deferred("_run")
+
 func _check(condition: bool, label: String) -> void:
 	if not condition:
 		failures.append(label)
@@ -12,7 +15,8 @@ func _capture(game, filename: String) -> void:
 	var image: Image = game.get_viewport().get_texture().get_image()
 	var err := image.save_png(filename)
 	_check(err == OK, "save screenshot %s" % filename)
-	print("CAPTURED ", filename)
+	_check(image.get_width() > 0 and image.get_height() > 0, "screenshot dimensions %s" % filename)
+	print("CAPTURED ", filename, " ", image.get_width(), "x", image.get_height(), " bytes=", FileAccess.get_file_as_bytes(filename).size())
 
 func _click_control(control: Control) -> void:
 	var center := control.get_global_rect().get_center()
