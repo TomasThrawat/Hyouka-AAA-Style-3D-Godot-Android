@@ -91,7 +91,7 @@ jobs:
           done
           test -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY"
 
-          timeout 60s "$GODOT_BIN"             --path .             --display-server wayland             --audio-driver Dummy             --windowed             --resolution 1280x720             --script runtime_gui_smoke_test.gd             2>&1 | tee "$RUNNER_TEMP/godot-gui.log"
+          timeout 60s "$GODOT_BIN"             --path .             --display-driver wayland             --audio-driver Dummy             --windowed             --resolution 1280x720             --script runtime_gui_smoke_test.gd             2>&1 | tee "$RUNNER_TEMP/godot-gui.log"
 
           if grep -Eiq "SCRIPT ERROR|PARSE ERROR|ERROR:|FAILED|EXCEPTION|FATAL|CRITICAL|WARNING:|DEPRECATED" "$RUNNER_TEMP/godot-gui.log"; then
             echo "Godot graphical smoke test emitted an error or warning"
