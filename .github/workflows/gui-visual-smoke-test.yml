@@ -74,6 +74,9 @@ jobs:
           XDG_RUNTIME_DIR: ${{ runner.temp }}/xdg-runtime
           WAYLAND_DISPLAY: wayland-1
           GODOT_WAYLAND_DISABLE_LIBDECOR: "1"
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          MESA_LOADER_DRIVER_OVERRIDE: llvmpipe
+          GALLIUM_DRIVER: llvmpipe
         run: |
           set -Eeuo pipefail
           mkdir -p "$XDG_RUNTIME_DIR"

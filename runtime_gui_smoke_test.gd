@@ -102,8 +102,15 @@ func _run() -> void:
 	_check(game.boss_active,"boss activates")
 	_check(game.boss_bar.visible,"boss bar visible")
 
-	game.free()
+	get_tree().paused = false
+	Input.flush_buffered_events()
+	game.queue_free()
+	game = null
+	scene = null
 	await process_frame
+	await process_frame
+	await process_frame
+	Input.flush_buffered_events()
 	await process_frame
 
 	if failures.is_empty():
