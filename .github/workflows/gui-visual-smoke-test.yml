@@ -58,20 +58,8 @@ jobs:
           mkdir -p build/gui
           timeout 60s xvfb-run -a -s "-screen 0 1280x720x24 +extension GLX +render -noreset"             "$GODOT_BIN" --display-driver x11 --audio-driver Dummy             --path . --script runtime_gui_smoke_test.gd --quit-after 300             2>&1 | tee "$RUNNER_TEMP/godot-gui.log"
 
-      - name: Validate GUI smoke test
-        working-directory: ${{ runner.temp }}/gui-project
-        run: |
-          set -Eeuo pipefail
-          test -s build/gui/menu.png
-          test -s build/gui/running.png
-          test -s build/gui/paused.png
-          grep -F "GUI SMOKE TEST PASS" "$RUNNER_TEMP/godot-gui.log"
-          if grep -Eiq 'SCRIPT ERROR|PARSE ERROR|EXCEPTION|FATAL|CRITICAL|Could not set V-Sync mode|All audio drivers failed' "$RUNNER_TEMP/godot-gui.log"; then
-            echo "Unexpected fatal/runtime Godot marker found."
-            exit 1
-          fi
-
       - name: Upload GUI evidence
+        if: ${{ always() }}
         uses: actions/upload-artifact@v7
         with:
           name: Hyouka-Godot-GUI-Visual-Evidence
@@ -82,3 +70,28 @@ jobs:
             ${{ runner.temp }}/godot-gui.log
           if-no-files-found: error
           retention-days: 7
+
+      - name: Validate GUI smoke test
+        if: ${{ success() }}
+        working-directory: ${{ runner.temp }}/gui-project
+        run: |
+          set -Eeuo pipefail
+          test -s build/gui/menu.png
+          test -s build/gui/running.png
+          test -s build/gui/paused.png
+          grep -F "GUI SMOKE TEST PASS" "$RUNNER_TEMP/godot-gui.log"
+
+          unexpected_warnings="$(grep -Ei 'WARNING:' "$RUNNER_TEMP/godot-gui.log" | grep -Ev 'Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver\.' || true)"
+          if [[ -n "$unexpected_warnings" ]]; then
+            echo "Unexpected Godot warning(s) found:"
+            printf '%s\n' "$unexpected_warnings"
+            exit 1
+          fi
+
+          if grep -Eiq 'SCRIPT ERROR|PARSE ERROR|EXCEPTION|FATAL|CRITICAL|All audio drivers failed|ERROR:' "$RUNNER_TEMP/godot-gui.log"; then
+            echo "Unexpected Godot runtime/error marker found."
+            exit 1
+          fi
+
+          echo "GUI VALIDATION PASS"
+          echo "Known CI-only X11 V-Sync warning is isolated and does not originate from the project."
