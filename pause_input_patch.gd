@@ -11,6 +11,7 @@ func _process(_delta: float) -> void:
 		return
 	var pause := scene.find_child("PauseButton", true, false) as Button
 	var touch_root := scene.find_child("TouchRoot", true, false) as Control
+	var pause_panel := scene.find_child("PauseMenu", true, false) as Control
 	var resume := scene.find_child("ResumeButton", true, false) as Button
 	var home := scene.find_child("MainMenuButton", true, false) as Button
 	if pause == null or touch_root == null:
@@ -21,6 +22,9 @@ func _process(_delta: float) -> void:
 	pause.position = Vector2(max(24.0, size.x - 100.0), 55.0)
 	pause.z_index = 1000
 	pause.mouse_filter = Control.MOUSE_FILTER_STOP
+	pause.process_mode = Node.PROCESS_MODE_ALWAYS
+	if pause_panel != null:
+		pause_panel.process_mode = Node.PROCESS_MODE_ALWAYS
 	if resume != null:
 		resume.process_mode = Node.PROCESS_MODE_ALWAYS
 	if home != null:
