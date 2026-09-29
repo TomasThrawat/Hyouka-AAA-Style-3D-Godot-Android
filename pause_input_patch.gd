@@ -11,6 +11,8 @@ func _process(_delta: float) -> void:
 		return
 	var pause := scene.find_child("PauseButton", true, false) as Button
 	var touch_root := scene.find_child("TouchRoot", true, false) as Control
+	var resume := scene.find_child("ResumeButton", true, false) as Button
+	var home := scene.find_child("MainMenuButton", true, false) as Button
 	if pause == null or touch_root == null:
 		return
 	if pause.get_parent() != touch_root:
@@ -19,8 +21,6 @@ func _process(_delta: float) -> void:
 	pause.position = Vector2(max(24.0, size.x - 100.0), 55.0)
 	pause.z_index = 1000
 	pause.mouse_filter = Control.MOUSE_FILTER_STOP
-	var resume := scene.find_child("ResumeButton", true, false) as Button
-	var home := scene.find_child("MainMenuButton", true, false) as Button
 	if resume != null:
 		resume.process_mode = Node.PROCESS_MODE_ALWAYS
 	if home != null:
@@ -49,12 +49,12 @@ func _input(event: InputEvent) -> void:
 	if scene.get_tree().paused:
 		var resume := scene.find_child("ResumeButton", true, false) as Button
 		var home := scene.find_child("MainMenuButton", true, false) as Button
-		if resume != null and resume.visible and resume.get_global_rect().has_point(point):
-			scene._toggle_pause()
+		if home != null and home.visible and home.get_global_rect().has_point(point):
+			home.emit_signal("pressed")
 			get_viewport().set_input_as_handled()
 			return
-		if home != null and home.visible and home.get_global_rect().has_point(point):
-			scene._show_menu()
+		if resume != null and resume.visible and resume.get_global_rect().has_point(point):
+			resume.emit_signal("pressed")
 			get_viewport().set_input_as_handled()
 			return
 		return
@@ -62,5 +62,5 @@ func _input(event: InputEvent) -> void:
 	if bool(scene.running) and not bool(scene.game_over):
 		var pause := scene.find_child("PauseButton", true, false) as Button
 		if pause != null and pause.visible and pause.get_global_rect().has_point(point):
-			scene._toggle_pause()
+			pause.emit_signal("pressed")
 			get_viewport().set_input_as_handled()
