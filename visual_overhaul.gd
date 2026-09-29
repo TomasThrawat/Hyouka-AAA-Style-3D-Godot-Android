@@ -26,7 +26,6 @@ func _setup_environment() -> void:
         env_node.environment = env
     env.background_mode = Environment.BG_COLOR
     env.background_color = BG
-    env.background_energy_multiplier = 0.8
     env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
     env.ambient_light_color = Color("19314a")
     env.ambient_light_energy = 0.72
@@ -34,15 +33,10 @@ func _setup_environment() -> void:
     env.fog_light_color = Color("172b46")
     env.fog_light_energy = 0.55
     env.fog_density = 0.006
-    env.fog_sky_affect = 0.35
     env.adjustment_enabled = true
     env.adjustment_brightness = 1.03
     env.adjustment_contrast = 1.08
     env.adjustment_saturation = 1.05
-    env.glow_enabled = true
-    env.glow_intensity = 0.72
-    env.glow_bloom = 0.18
-    env.glow_hdr_threshold = 1.2
 
     if get_node_or_null("KeyLight") == null:
         var key := DirectionalLight3D.new()
@@ -157,7 +151,7 @@ func _build_hud() -> void:
 
     var status := Label.new()
     status.position = Vector2(1010, 18)
-    status.text = "●  ONLINE\n   SYSTEMS NOMINAL"
+    status.text = "ONLINE\nSYSTEMS NOMINAL"
     status.add_theme_color_override("font_color", CYAN)
     status.add_theme_font_size_override("font_size", 12)
     top.add_child(status)
