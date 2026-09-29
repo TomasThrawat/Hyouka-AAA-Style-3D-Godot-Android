@@ -46,7 +46,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           mkdir -p build/gui
-          xvfb-run -a -s "-screen 0 1280x720x24 +extension GLX +render -noreset"             "$GODOT_BIN" --display-driver x11 --audio-driver Dummy --path .             --script runtime_gui_smoke_test.gd             2>&1 | tee "$RUNNER_TEMP/godot-gui.log"
+          timeout 60s xvfb-run -a -s "-screen 0 1280x720x24 +extension GLX +render -noreset"             "$GODOT_BIN" --display-driver x11 --audio-driver Dummy --disable-vsync             --path . --script runtime_gui_smoke_test.gd --quit-after 300             2>&1 | tee "$RUNNER_TEMP/godot-gui.log"
 
       - name: Validate GUI smoke test
         run: |
