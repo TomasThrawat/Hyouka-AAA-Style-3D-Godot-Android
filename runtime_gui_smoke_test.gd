@@ -102,7 +102,7 @@ func _run() -> void:
 	_check(game.boss_active,"boss activates")
 	_check(game.boss_bar.visible,"boss bar visible")
 
-	get_tree().paused = false
+	paused = false
 	Input.flush_buffered_events()
 	game.queue_free()
 	game = null
