@@ -107,8 +107,10 @@ func _run() -> void:
 	_check(game.boss_bar.visible, "boss bar visible")
 
 	get_tree().paused = false
-	game.queue_free()
-	remove_child(game)
+	var game_parent: Node = game.get_parent()
+	if game_parent != null:
+		game_parent.remove_child(game)
+	game.free()
 	game = null
 	await get_tree().process_frame
 	await get_tree().process_frame
