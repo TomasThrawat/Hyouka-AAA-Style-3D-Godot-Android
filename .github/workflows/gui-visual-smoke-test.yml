@@ -82,7 +82,7 @@ jobs:
           done
           xdpyinfo -display "$DISPLAY" >/dev/null 2>&1
 
-          timeout 60s "$GODOT_BIN"             --path .             --display-driver x11             --rendering-driver opengl3             --audio-driver Dummy             --windowed             --resolution 1280x720             --script runtime_gui_smoke_test.gd             2>&1 | tee "$RUNNER_TEMP/godot-gui.log"
+          timeout 60s "$GODOT_BIN"             --path .             --display-driver x11             --rendering-driver opengl3_es             --audio-driver Dummy             --windowed             --resolution 1280x720             --script runtime_gui_smoke_test.gd             2>&1 | tee "$RUNNER_TEMP/godot-gui.log"
 
           if grep -Eiq "SCRIPT ERROR|PARSE ERROR|ERROR:|FAILED|EXCEPTION|FATAL|CRITICAL|WARNING:|DEPRECATED" "$RUNNER_TEMP/godot-gui.log"; then
             cat "$RUNNER_TEMP/godot-gui.log"
