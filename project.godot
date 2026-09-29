@@ -8,7 +8,6 @@ config/version="3.0.0"
 config/icon="res://icon.svg"
 
 [display]
-display_server/driver.linuxbsd="wayland"
 window/size/viewport_width=1280
 window/size/viewport_height=720
 window/size/mode=3
