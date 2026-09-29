@@ -38,7 +38,7 @@ func _run() -> void:
 	await process_frame
 	await create_timer(0.7).timeout
 
-	_check(DisplayServer.get_name() == "Wayland","Wayland display backend")
+	_check(DisplayServer.get_name() == "X11" or DisplayServer.get_name() == "Wayland","graphical display backend")
 	_check(game.start_button != null,"DEPLOY exists")
 	_check(game.map_buttons.size() == 3,"three missions exist")
 	_check(game.fire_button != null,"FIRE exists")
