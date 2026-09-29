@@ -42,7 +42,7 @@ jobs:
             exit 0
           fi
           timeout 180 sudo apt-get update -o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20
-          timeout 180 sudo apt-get install -y --no-install-recommends             xvfb x11-utils xcursor-themes adwaita-icon-theme             curl unzip python3 file
+          timeout 180 sudo apt-get install -y --no-install-recommends xvfb x11-utils xcursor-themes adwaita-icon-theme curl unzip python3 file
           command -v Xvfb
           command -v xdpyinfo
           test -d /usr/share/icons/Adwaita/cursors
@@ -56,11 +56,14 @@ jobs:
           curl -fsSLO "https://github.com/godotengine/godot/releases/download/4.7.2-stable/SHA512-SUMS.txt"
           grep "Godot_v4.7.2-stable_linux.x86_64.zip" SHA512-SUMS.txt | sha512sum -c -
           unzip -q "Godot_v4.7.2-stable_linux.x86_64.zip"
-          test -x "$RUNNER_TEMP/godot/Godot_v4.7.2-stable_linux.x86_64/Godot_v4.7.2-stable_linux.x86_64"
+          GODOT_FOUND="$(find "$RUNNER_TEMP/godot" -maxdepth 3 -type f -name "Godot_v4.7.2-stable_linux.x86_64" -perm -111 -print -quit)"
+          test -n "$GODOT_FOUND"
+          ln -sfn "$GODOT_FOUND" "$RUNNER_TEMP/godot/Godot"
+          test -x "$RUNNER_TEMP/godot/Godot"
 
       - name: Import project
         env:
-          GODOT_BIN: ${{ runner.temp }}/godot/Godot_v4.7.2-stable_linux.x86_64/Godot_v4.7.2-stable_linux.x86_64
+          GODOT_BIN: ${{ runner.temp }}/godot/Godot
         run: |
           set -Eeuo pipefail
           "$GODOT_BIN" --headless --editor --path . --quit-after 120 2>&1 | tee "$RUNNER_TEMP/import.log"
@@ -71,7 +74,7 @@ jobs:
 
       - name: Launch graphical Godot smoke test
         env:
-          GODOT_BIN: ${{ runner.temp }}/godot/Godot_v4.7.2-stable_linux.x86_64/Godot_v4.7.2-stable_linux.x86_64
+          GODOT_BIN: ${{ runner.temp }}/godot/Godot
           DISPLAY: ":99"
           XCURSOR_THEME: Adwaita
           XCURSOR_PATH: /usr/share/icons
