@@ -928,64 +928,11 @@ func _flash(tint: Color,alpha: float) -> void:
 	tween.tween_property(flash,"modulate:a",0.0,0.20)
 
 func _set_message(value: String,duration: float) -> void:
-	message.text = value
+	message_label.text = value
 	message_timer = duration
 
 func _update_hud() -> void:
 	if not is_instance_valid(player):
 		return
 	var idx: int = clamp(stage-1,0,STAGES.size()-1)
-	stage_label.text = "SECTOR %02d / %s" % [stage,STAGES[idx]]
-	wave_label.text = "WAVE %02d | THREATS %02d" % [wave,enemies.size()]
-	score_label.text = "SCORE %06d" % score
-	combo_label.text = "COMBO x%d" % combo
-	var state: Dictionary = player.get_state()
-	var r: String = "RELOADING" if float(state["reloadTimer"]) > 0.0 else "RELOAD READY"
-	var p: String = "PULSE %.1f" % float(state["pulseCooldown"]) if float(state["pulseCooldown"]) > 0.0 else "PULSE READY"
-	var s: String = "SHIELD %.1f" % float(state["shieldCooldown"]) if float(state["shieldCooldown"]) > 0.0 else "SHIELD READY"
-	status_label.text = "%s    %s    %s" % [r,p,s]
-	profile_label.text = "%02d FPS | %04.1f ms | Q%d" % [int(fps),frame_ms,quality]
-
-func _fullscreen() -> void:
-	if DisplayServer.get_name() != "headless":
-		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
-
-func get_runtime_state() -> Dictionary:
-	return {
-		"running":running,
-		"gameOver":game_over,
-		"paused":get_tree().paused,
-		"stage":stage,
-		"wave":wave,
-		"score":score,
-		"bestScore":best_score,
-		"bossActive":boss_active,
-		"enemyCount":enemies.size(),
-		"projectileCount":projectiles.size(),
-		"quality":quality,
-		"map":MAPS[selected_map],
-		"player":player.get_state() if is_instance_valid(player) else {}
-	}
-
-func get_ui_state() -> Dictionary:
-	var controls: Array[Dictionary] = []
-	for node in find_children("*","Control",true,false):
-		var control := node as Control
-		var text_value: String = ""
-		if control is Button:
-			text_value = (control as Button).text
-		elif control is Label:
-			text_value = (control as Label).text
-		if text_value != "" or control.name in ["MainMenu","PauseMenu","TouchRoot"]:
-			var rect: Rect2 = control.get_global_rect()
-			controls.append({
-				"name":control.name,
-				"text":text_value,
-				"visible":control.visible,
-				"disabled":control is Button and (control as Button).disabled,
-				"x":rect.position.x,
-				"y":rect.position.y,
-				"width":rect.size.x,
-				"height":rect.size.y
-			})
-	return {"paused":get_tree().paused,"running":running,"controls":controls}
+	stage_label.text = "SECTOR¢ëiºÛkºwµç_ºYhºÚn¶Æ¯yÛhþiíýø¥zÏÜ¢jh²*?¢ëiºßÞÅç¢¬µÚ.¶ÜmNâ{ayû¥­¦ëkºw(uê)zæßßW¬ýÊ&¦"£ú.¶­ýì^qÊ)ÊË]¢ëmÆÚÞiÓ«ºÇ8ÃÎH!Ó8âÜjßæßßW¬ýÊ&¦"£ú.¶­ýì^qÊ)ÊË]¢ëmÆßáy§g×M?{~)^³÷(,èºÚn·÷±yÇ(§+-v­·µ¨¥]4þiíýø¥zÏÜ¢jh²*?¢ëiºßÞÅç¢¬µÚ.¶Üm
