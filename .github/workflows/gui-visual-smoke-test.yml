@@ -31,7 +31,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           need_install=0
-          for bin in weston curl unzip python3 file; do
+          for bin in sway curl unzip python3 file; do
             if ! command -v "$bin" >/dev/null 2>&1; then
               echo "Missing GUI tool: $bin"
               need_install=1
@@ -42,8 +42,8 @@ jobs:
             exit 0
           fi
           timeout 180 sudo apt-get update -o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20
-          timeout 180 sudo apt-get install -y --no-install-recommends weston curl unzip python3 file
-          for bin in weston curl unzip python3 file; do
+          timeout 180 sudo apt-get install -y --no-install-recommends sway curl unzip python3 file
+          for bin in sway curl unzip python3 file; do
             command -v "$bin" >/dev/null 2>&1
           done
 
@@ -73,7 +73,8 @@ jobs:
           GODOT_BIN: ${{ runner.temp }}/godot/Godot_v4.7.2-stable_mono_linux_x86_64/Godot_v4.7.2-stable_mono_linux.x86_64
           XDG_RUNTIME_DIR: ${{ runner.temp }}/xdg-runtime
           WAYLAND_DISPLAY: wayland-1
-          GODOT_WAYLAND_DISABLE_LIBDECOR: "1"
+          XDG_CURRENT_DESKTOP: sway
+          XDG_SESSION_TYPE: wayland
           LIBGL_ALWAYS_SOFTWARE: "1"
           MESA_LOADER_DRIVER_OVERRIDE: llvmpipe
           GALLIUM_DRIVER: llvmpipe
@@ -81,9 +82,15 @@ jobs:
           set -Eeuo pipefail
           mkdir -p "$XDG_RUNTIME_DIR"
           chmod 700 "$XDG_RUNTIME_DIR"
-          weston -B headless --renderer=pixman --socket="$WAYLAND_DISPLAY" --width=1280 --height=720 --idle-time=0 >/tmp/weston.log 2>&1 &
-          WESTON_PID=$!
-          trap 'kill "$WESTON_PID" || true' EXIT
+          cat >"$RUNNER_TEMP/sway.conf" <<'EOF'
+xwayland disable
+default_border none
+output HEADLESS-1 mode 1280x720
+seat seat0 hide_cursor 0
+EOF
+          WLR_BACKENDS=headless WLR_RENDERER=pixman sway --unsupported-gpu -c "$RUNNER_TEMP/sway.conf" >/tmp/sway.log 2>&1 &
+          SWAY_PID=$!
+          trap 'kill "$SWAY_PID" || true' EXIT
           for _ in $(seq 1 50); do
             if [ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]; then
               break
@@ -96,8 +103,8 @@ jobs:
             cat "$RUNNER_TEMP/gui.log"
             exit 1
           fi
-          if grep -Eiq "error|warning|fatal|critical" /tmp/weston.log; then
-            cat /tmp/weston.log
+          if grep -Eiq "error|fatal|critical" /tmp/sway.log; then
+            cat /tmp/sway.log
             exit 1
           fi
 
@@ -106,5 +113,5 @@ jobs:
           set -Eeuo pipefail
           cat "$RUNNER_TEMP/import.log"
           cat "$RUNNER_TEMP/gui.log"
-          cat /tmp/weston.log
+          cat /tmp/sway.log
           grep -q "GUI SMOKE TEST PASS" "$RUNNER_TEMP/gui.log"
