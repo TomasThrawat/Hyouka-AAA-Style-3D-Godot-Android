@@ -88,42 +88,17 @@ jobs:
           done
           xdpyinfo -display "$DISPLAY" >/dev/null 2>&1
 
-          # Xvfb/llvmpipe cannot expose X11 swap-control. Godot logs this as a
-          # capability warning even though the game continues normally.
+          # Xvfb/llvmpipe lacks X11 swap-control. Keep the test strict for every
+          # other warning/error and require the native Godot smoke-test marker.
           "$GODOT_BIN" --path . --display-driver x11 --audio-driver Dummy --windowed --resolution 1280x720 --script runtime_gui_smoke_test.gd 2>&1 | tee "$RUNNER_TEMP/gui.log"
 
-          python3 - "$RUNNER_TEMP/gui.log" <<'PY'
-import re
-import sys
-
-path = sys.argv[1]
-known_ci_warning = re.compile(
-    r"WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver\."
-)
-problem = re.compile(
-    r"SCRIPT ERROR|PARSE ERROR|ERROR|FAILED|EXCEPTION|FATAL|CRITICAL|WARNING|DEPRECATED",
-    re.IGNORECASE,
-)
-
-found = []
-with open(path, encoding="utf-8", errors="replace") as handle:
-    for line in handle:
-        if problem.search(line) and not known_ci_warning.search(line):
-            found.append(line.rstrip())
-
-if found:
-    print("Unexpected Godot errors/warnings:")
-    print("\n".join(found))
-    raise SystemExit(1)
-
-with open(path, encoding="utf-8", errors="replace") as handle:
-    log = handle.read()
-if "GUI SMOKE TEST PASS" not in log:
-    print("GUI SMOKE TEST PASS marker missing")
-    raise SystemExit(1)
-
-print("GUI runtime checks PASS")
-PY
+          ACTIONABLE_LOG="$(grep -Ei 'SCRIPT ERROR|PARSE ERROR|ERROR|FAILED|EXCEPTION|FATAL|CRITICAL|WARNING|DEPRECATED' "$RUNNER_TEMP/gui.log" | grep -Eiv 'WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver\.' || true)"
+          if [ -n "$ACTIONABLE_LOG" ]; then
+            printf '%s\n' "Unexpected Godot errors/warnings:"
+            printf '%s\n' "$ACTIONABLE_LOG"
+            exit 1
+          fi
+          grep -q "GUI SMOKE TEST PASS" "$RUNNER_TEMP/gui.log"
 
       - name: Read complete Godot logs
         run: |
