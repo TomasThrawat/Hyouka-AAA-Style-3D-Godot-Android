@@ -56,7 +56,7 @@ func setup(target_node: Node3D, difficulty: float, kind: String, is_boss: bool) 
 	enraged = false
 	health_changed.emit(health, max_health)
 	collision_layer = 0
-	collision_mask = 0
+	collision_mask = 1
 	_build_visual()
 
 func _build_visual() -> void:
@@ -166,6 +166,8 @@ func _update_animation(delta: float, direction: Vector3) -> void:
 	rotation.y = lerp_angle(rotation.y, atan2(-direction.x, -direction.z), min(1.0, delta * 6.0))
 
 func take_damage(amount: float) -> void:
+	if health <= 0.0:
+		return
 	health = max(0.0, health - amount)
 	health_changed.emit(health, max_health)
 	_hit_feedback()

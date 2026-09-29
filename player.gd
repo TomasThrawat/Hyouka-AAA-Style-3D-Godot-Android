@@ -115,7 +115,7 @@ func _update_animation(delta: float) -> void:
 	var run_phase := anim_time * (7.0 + movement * 0.8)
 	var target_bob := 0.018 + sin(run_phase * 0.5) * (0.008 if movement < 0.2 else 0.022)
 	visual_root.position.y = lerp(visual_root.position.y, target_bob, min(1.0, delta * 8.0))
-	visual_root.rotation.y = lerp_angle(visual_root.rotation.y, rotation.y, min(1.0, delta * (9.0 if movement > 0.3 else 4.0)))
+	visual_root.rotation.y = 0.0
 
 
 func shoot() -> void:

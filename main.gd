@@ -132,7 +132,8 @@ func _process(delta: float) -> void:
 		_update_pickups(delta)
 		_update_camera(delta)
 		if wave_timer <= 0.0 and not transition_lock:
-			_start_wave()
+			if (stage < 3 and wave < 3) or (stage == 3 and wave < 4):
+				_start_wave()
 		if pickup_timer <= 0.0:
 			_spawn_pickup()
 			pickup_timer = rng.randf_range(4.0, 7.0)
@@ -711,11 +712,14 @@ func _start_game_pressed() -> void:
 
 
 func _begin_run(continue_run: bool) -> void:
+	var completed_save := false
 	if continue_run:
 		save_system.load_state()
 		stage = max(1, save_system.stage)
 		score = max(0, save_system.score)
+		completed_save = stage >= 4
 	else:
+		stage = 1
 		score = 0
 	wave = 0
 	enemies_defeated = 0
@@ -736,6 +740,9 @@ func _begin_run(continue_run: bool) -> void:
 	_set_touch_controls_visible(true)
 	pause_panel.hide()
 	pause_button.show()
+	if completed_save:
+		_win_game()
+		return
 	player.reset_for_run()
 	player.position = spawn_position
 	_clear_dynamic_entities()
@@ -929,7 +936,8 @@ func _check_stage_completion() -> void:
 		return
 	if final_boss_active:
 		return
-	if wave >= 3 and enemies.is_empty() and wave_timer > 3.0:
+	var required_waves_cleared := (stage < 3 and wave >= 3) or (stage == 3 and wave >= 4)
+	if required_waves_cleared and enemies.is_empty():
 		transition_lock = true
 		_complete_stage()
 
@@ -1318,6 +1326,8 @@ func _force_android_fullscreen() -> void:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 
 func _set_touch_controls_visible(visible_value: bool) -> void:
+	if touch_root:
+		touch_root.mouse_filter = Control.MOUSE_FILTER_PASS if visible_value else Control.MOUSE_FILTER_IGNORE
 	for control in touch_controls:
 		if is_instance_valid(control):
 			control.visible = visible_value

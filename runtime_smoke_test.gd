@@ -40,6 +40,24 @@ func _run() -> void:
 	game._start_game_pressed()
 	await create_timer(0.8).timeout
 	_check(game.running, "game starts")
+	_check(game.touch_root.mouse_filter == Control.MOUSE_FILTER_PASS, "touch root enabled while playing")
+
+	var yaw_before: float = game.camera_yaw
+	var camera_touch := InputEventScreenTouch.new()
+	camera_touch.index = 19
+	camera_touch.pressed = true
+	camera_touch.position = Vector2(640, 360)
+	game._unhandled_input(camera_touch)
+	var camera_drag := InputEventScreenDrag.new()
+	camera_drag.index = 19
+	camera_drag.position = Vector2(700, 330)
+	game._unhandled_input(camera_drag)
+	_check(abs(game.camera_yaw - yaw_before) > 0.02, "camera touch rotates view")
+	var camera_up := InputEventScreenTouch.new()
+	camera_up.index = 19
+	camera_up.pressed = false
+	camera_up.position = camera_drag.position
+	game._unhandled_input(camera_up)
 
 	var touch_down := InputEventScreenTouch.new()
 	touch_down.index = 17
@@ -83,9 +101,19 @@ func _run() -> void:
 	game.pause_button.pressed.emit()
 	await process_frame
 	_check(paused, "PAUSE button pauses")
+	_check(game.touch_root.mouse_filter == Control.MOUSE_FILTER_IGNORE, "touch root released while paused")
 	game.pause_button.pressed.emit()
 	await process_frame
 	_check(not paused, "PAUSE button resumes")
+
+	game.stage = 1
+	game.wave = 3
+	game.wave_timer = 0.1
+	game.transition_lock = false
+	game.final_boss_active = false
+	game.enemies.clear()
+	game._check_stage_completion()
+	_check(game.transition_lock, "stage completes after final non-boss wave even when timer expires")
 
 	game.stage = 3
 	game.wave = 3
