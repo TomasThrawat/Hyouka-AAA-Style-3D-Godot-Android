@@ -189,7 +189,7 @@ func _build_world() -> void:
 	]
 	var station_count: int = 2 if selected_map == 1 else 4
 	for i in range(station_count):
-		var station := STATION_SCENE.instantiate()
+		var station: Node3D = STATION_SCENE.instantiate() as Node3D
 		station.name = "Station_%02d" % i
 		station.position = points[i]
 		station.scale = Vector3.ONE * (0.80 + float(selected_map) * 0.08)
