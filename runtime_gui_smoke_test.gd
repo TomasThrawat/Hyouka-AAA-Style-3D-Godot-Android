@@ -37,6 +37,7 @@ func _run() -> void:
 	root.add_child(game)
 	await process_frame
 	await create_timer(0.7).timeout
+	_check(DisplayServer.get_name() == "X11","X11 display backend")
 
 	_check(game.start_button != null,"DEPLOY exists")
 	_check(game.map_buttons.size() == 3,"three missions exist")
@@ -86,6 +87,7 @@ func _run() -> void:
 	await _input_click(game.reload_button)
 	await create_timer(1.2).timeout
 	_check(game.player.ammo == game.player.magazine_size,"RELOAD completes")
+	_check(game.fx_nodes.is_empty(),"temporary VFX cleaned")
 
 	await _input_click(game.pause_button)
 	await process_frame

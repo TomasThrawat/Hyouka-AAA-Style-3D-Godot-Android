@@ -976,7 +976,13 @@ func _impact(position: Vector3, tint: Color, power: float) -> void:
 	fx.draw_pass_1 = mesh
 	add_child(fx)
 	fx_nodes.append(fx)
+	fx.finished.connect(_on_fx_finished.bind(fx), CONNECT_ONE_SHOT)
 	fx.emitting = true
+
+func _on_fx_finished(effect: GPUParticles3D):
+	fx_nodes.erase(effect)
+	if is_instance_valid(effect):
+		effect.queue_free()
 
 func _flash(tint: Color, alpha: float) -> void:
 	flash.modulate = Color(tint.r, tint.g, tint.b, 0.0)
