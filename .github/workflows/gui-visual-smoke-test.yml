@@ -85,7 +85,7 @@ jobs:
             sleep 0.2
           done
           xdpyinfo -display "$DISPLAY" >/dev/null 2>&1
-          "$GODOT_BIN" --path . --display-driver x11 --audio-driver Dummy --script runtime_gui_smoke_test.gd 2>&1 | tee "$RUNNER_TEMP/gui.log"
+          "$GODOT_BIN" --path . --display-driver x11 --audio-driver Dummy --windowed --resolution 1280x720 --script runtime_gui_smoke_test.gd 2>&1 | tee "$RUNNER_TEMP/gui.log"
           if grep -Eiq "SCRIPT ERROR|PARSE ERROR|ERROR|FAILED|EXCEPTION|FATAL|CRITICAL|WARNING|DEPRECATED" "$RUNNER_TEMP/gui.log"; then
             echo "Actionable Godot warning/error detected"
             cat "$RUNNER_TEMP/gui.log"
