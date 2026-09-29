@@ -26,24 +26,57 @@ jobs:
       - name: Install GUI support tools
         run: |
           set -Eeuo pipefail
-          need_install=0
-          for bin in curl unzip python3 file; do
+          missing=0
+          for bin in weston curl unzip python3 file; do
             if ! command -v "$bin" >/dev/null 2>&1; then
-              echo "Missing build tool: $bin"
-              need_install=1
+              echo "Missing GUI tool: $bin"
+              missing=1
             fi
           done
-          if [ "$need_install" -eq 0 ]; then
-            echo "All required build tools are already installed"
-            exit 0
+          for pkg in xcursor-themes libxcursor1; do
+            dpkg-query -W "$pkg" >/dev/null 2>&1 || missing=1
+          done
+          if [ "$missing" -eq 1 ]; then
+            timeout 180 sudo apt-get update -o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20
+            timeout 180 sudo apt-get install -y --no-install-recommends weston curl unzip python3 file xcursor-themes libxcursor1
           fi
-          timeout 180 sudo apt-get update -o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20
-          timeout 180 sudo apt-get install -y --no-install-recommends curl unzip python3 file
+          command -v weston >/dev/null
+          command -v curl >/dev/null
+          command -v unzip >/dev/null
+          command -v python3 >/dev/null
+          command -v file >/dev/null
+          dpkg-query -W xcursor-themes >/dev/null
+          dpkg-query -W libxcursor1 >/dev/null
 
-      - name: Setup headless Wayland compositor
-        uses: pyvista/setup-headless-display-action@v3
-        with:
-          wm: weston
+      - name: Configure persistent headless Wayland
+        run: |
+          set -Eeuo pipefail
+          RUNTIME="$RUNNER_TEMP/wayland-runtime"
+          mkdir -p "$RUNTIME"
+          chmod 700 "$RUNTIME"
+          echo "XDG_RUNTIME_DIR=$RUNTIME" >> "$GITHUB_ENV"
+          echo "WAYLAND_DISPLAY=wayland-test" >> "$GITHUB_ENV"
+          echo "XDG_SESSION_TYPE=wayland" >> "$GITHUB_ENV"
+          echo "DISPLAY=" >> "$GITHUB_ENV"
+
+      - name: Start Weston headless compositor
+        run: |
+          set -Eeuo pipefail
+          rm -f "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY"
+          nohup weston --backend=headless-backend.so --socket="$WAYLAND_DISPLAY" --width=1280 --height=720 --idle-time=0 --no-config >"$RUNNER_TEMP/weston.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/weston.pid"
+          for _ in $(seq 1 40); do
+            if [ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]; then
+              break
+            fi
+            if ! kill -0 "$(cat "$RUNNER_TEMP/weston.pid")" 2>/dev/null; then
+              cat "$RUNNER_TEMP/weston.log"
+              exit 1
+            fi
+            sleep 0.25
+          done
+          test -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY"
+          cat "$RUNNER_TEMP/weston.log"
 
       - name: Download official Godot 4.7.2 Standard
         run: |
