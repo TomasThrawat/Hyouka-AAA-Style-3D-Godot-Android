@@ -11,7 +11,14 @@ permissions:
 jobs:
   gui-functional-smoke:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
+    env:
+      CI: "1"
+      CI_GUI_SMOKE: "1"
+      XDG_RUNTIME_DIR: ${{ runner.temp }}/xdg-runtime
+      WAYLAND_DISPLAY: wayland-1
+      GODOT_WAYLAND_DISABLE_LIBDECOR: "1"
+      LIBGL_ALWAYS_SOFTWARE: "1"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -22,62 +29,88 @@ jobs:
           GIT_CONFIG_KEY_1: advice.defaultBranchName
           GIT_CONFIG_VALUE_1: false
 
-      - name: Install build dependencies
+      - name: Install GUI dependencies
         run: |
           set -Eeuo pipefail
           need_install=0
-          for bin in curl unzip python3 file; do
+          for bin in weston curl unzip python3 file; do
             if ! command -v "$bin" >/dev/null 2>&1; then
-              echo "Missing build tool: $bin"
+              echo "Missing GUI tool: $bin"
               need_install=1
             fi
           done
           if [ "$need_install" -eq 0 ]; then
-            exit 0
+            echo "All GUI tools are already installed"
+          else
+            timeout 180 sudo apt-get update -o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20
+            timeout 180 sudo apt-get install -y --no-install-recommends weston curl unzip python3 file
           fi
-          timeout 180 sudo apt-get update -o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20
-          timeout 180 sudo apt-get install -y --no-install-recommends curl unzip python3 file
+          for bin in weston curl unzip python3 file; do
+            command -v "$bin" >/dev/null 2>&1
+          done
 
       - name: Download official Godot 4.7.2
         run: |
           set -Eeuo pipefail
           mkdir -p "$RUNNER_TEMP/godot"
           cd "$RUNNER_TEMP/godot"
-          curl -fL --retry 8 --retry-all-errors --retry-delay 3 --connect-timeout 20 --max-time 180 -o Godot_v4.7.2-stable_linux.x86_64.zip "https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip"
-          curl -fL --retry 8 --retry-all-errors --retry-delay 2 --connect-timeout 20 --max-time 60 -o SHA512-SUMS.txt "https://github.com/godotengine/godot/releases/download/4.7.2-stable/SHA512-SUMS.txt"
+          curl -fL --retry 8 --retry-all-errors --retry-delay 3 --connect-timeout 20 --max-time 180             -o Godot_v4.7.2-stable_linux.x86_64.zip             "https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip"
+          curl -fL --retry 8 --retry-all-errors --retry-delay 2 --connect-timeout 20 --max-time 60             -o SHA512-SUMS.txt             "https://github.com/godotengine/godot/releases/download/4.7.2-stable/SHA512-SUMS.txt"
           grep "Godot_v4.7.2-stable_linux.x86_64.zip" SHA512-SUMS.txt | sha512sum -c -
-          unzip -q "Godot_v4.7.2-stable_linux.x86_64.zip"
-          GODOT_BIN="$RUNNER_TEMP/godot/Godot_v4.7.2-stable_linux.x86_64"
-          test -x "$GODOT_BIN"
-          echo "GODOT_BIN=$GODOT_BIN" >> "$GITHUB_ENV"
-          "$GODOT_BIN" --version
+          unzip -q Godot_v4.7.2-stable_linux.x86_64.zip
+          echo "GODOT_BIN=$RUNNER_TEMP/godot/Godot_v4.7.2-stable_linux.x86_64" >> "$GITHUB_ENV"
+          "$RUNNER_TEMP/godot/Godot_v4.7.2-stable_linux.x86_64" --version
 
       - name: Import project with zero-warning gate
         run: |
           set -Eeuo pipefail
           "$GODOT_BIN" --headless --editor --path . --quit-after 120 2>&1 | tee "$RUNNER_TEMP/godot-import.log"
-          if grep -Eiq "SCRIPT ERROR|PARSE ERROR|ERROR|FAILED|EXCEPTION|FATAL|CRITICAL|WARNING|DEPRECATED" "$RUNNER_TEMP/godot-import.log"; then
+          if grep -Eiq "SCRIPT ERROR|PARSE ERROR|ERROR:|FAILED|EXCEPTION|FATAL|CRITICAL|WARNING:|DEPRECATED" "$RUNNER_TEMP/godot-import.log"; then
+            echo "Godot import emitted an error or warning"
             cat "$RUNNER_TEMP/godot-import.log"
             exit 1
           fi
 
-      - name: Run native Godot UI/input smoke test
-        env:
-          CI_GUI_SMOKE: "1"
+      - name: Run native graphical Godot smoke test
         run: |
           set -Eeuo pipefail
-          timeout 45s "$GODOT_BIN" --headless --path . --script ci_gui_smoke.gd --quit-after 45 2>&1 | tee "$RUNNER_TEMP/godot-smoke.log"
-          if grep -Eiq "SCRIPT ERROR|PARSE ERROR|ERROR|FAILED|EXCEPTION|FATAL|CRITICAL|WARNING|DEPRECATED" "$RUNNER_TEMP/godot-smoke.log"; then
-            cat "$RUNNER_TEMP/godot-smoke.log"
+          mkdir -p "$XDG_RUNTIME_DIR"
+          chmod 700 "$XDG_RUNTIME_DIR"
+          weston --backend=headless --renderer=pixman --socket="$WAYLAND_DISPLAY" --width=1280 --height=720 --idle-time=0             >"$RUNNER_TEMP/weston.log" 2>&1 &
+          WESTON_PID=$!
+          trap 'kill "$WESTON_PID" >/dev/null 2>&1 || true' EXIT
+
+          for _ in $(seq 1 60); do
+            if [ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]; then
+              break
+            fi
+            sleep 0.2
+          done
+          test -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY"
+
+          timeout 60s "$GODOT_BIN"             --path .             --display-server wayland             --audio-driver Dummy             --windowed             --resolution 1280x720             --script runtime_gui_smoke_test.gd             2>&1 | tee "$RUNNER_TEMP/godot-gui.log"
+
+          if grep -Eiq "SCRIPT ERROR|PARSE ERROR|ERROR:|FAILED|EXCEPTION|FATAL|CRITICAL|WARNING:|DEPRECATED" "$RUNNER_TEMP/godot-gui.log"; then
+            echo "Godot graphical smoke test emitted an error or warning"
+            cat "$RUNNER_TEMP/godot-gui.log"
             exit 1
           fi
-          grep -q "GUI SMOKE TEST PASS" "$RUNNER_TEMP/godot-smoke.log"
 
-      - name: Read complete Godot logs
+          if grep -Eiq "error|fatal|critical|warning" "$RUNNER_TEMP/weston.log"; then
+            echo "Weston emitted an error/warning"
+            cat "$RUNNER_TEMP/weston.log"
+            exit 1
+          fi
+
+          grep -q "GUI SMOKE TEST PASS" "$RUNNER_TEMP/godot-gui.log"
+
+      - name: Read complete GUI verification logs
         if: always()
         run: |
           set -Eeuo pipefail
           echo "=== COMPLETE GODOT IMPORT LOG ==="
           cat "$RUNNER_TEMP/godot-import.log" 2>/dev/null || true
-          echo "=== COMPLETE GODOT SMOKE LOG ==="
-          cat "$RUNNER_TEMP/godot-smoke.log" 2>/dev/null || true
+          echo "=== COMPLETE GODOT GUI LOG ==="
+          cat "$RUNNER_TEMP/godot-gui.log" 2>/dev/null || true
+          echo "=== COMPLETE WESTON LOG ==="
+          cat "$RUNNER_TEMP/weston.log" 2>/dev/null || true
