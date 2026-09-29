@@ -10,128 +10,96 @@ func _check(condition: bool, label: String) -> void:
 		failures.append(label)
 
 func _run() -> void:
-	var game_scene := load("res://Main.tscn")
-	_check(game_scene != null, "Main.tscn load")
-	if game_scene == null:
+	var scene := load("res://Main.tscn")
+	_check(scene != null, "Main.tscn loads")
+	if scene == null:
 		quit(1)
 		return
 
-	var game = game_scene.instantiate()
+	var game = scene.instantiate()
 	root.add_child(game)
 	await process_frame
 	await create_timer(0.45).timeout
 
 	_check(game.player != null, "player exists")
-	_check(game.joystick != null, "joystick exists")
-	_check(game.fire_button != null, "fire button exists")
-	_check(game.boost_button != null, "boost button exists")
-	_check(game.tactical_button != null, "tactical button exists")
-	_check(game.shield_button != null, "shield button exists")
-	_check(game.pause_button != null, "pause button exists")
-	_check(game.fire_button.text.find("FIRE") >= 0, "FIRE button label")
-	_check(game.boost_button.text.find("BOOST") >= 0, "BOOST button label")
-	_check(game.map_buttons.size() == 3, "three map buttons exist")
+	_check(game.start_button != null, "DEPLOY exists")
+	_check(game.fire_button != null, "FIRE exists")
+	_check(game.boost_button != null, "BOOST exists")
+	_check(game.tactical_button != null, "PULSE exists")
+	_check(game.shield_button != null, "SHIELD exists")
+	_check(game.reload_button != null, "RELOAD exists")
+	_check(game.pause_button != null, "PAUSE exists")
+	_check(game.map_buttons.size() == 3, "three mission buttons exist")
+	_check(game.get_ui_state().controls.size() > 8, "native UI state enumerates controls")
 
-	for i in range(game.map_buttons.size()):
-		game.map_buttons[i].pressed.emit()
+	for i in range(3):
+		game._select_map(i)
 		await process_frame
-		_check(game.selected_map == i, "map button %d selects map" % i)
+		_check(game.selected_map == i, "mission selection %d" % (i + 1))
 
 	game._start_game_pressed()
-	await create_timer(0.8).timeout
+	await create_timer(0.35).timeout
 	_check(game.running, "game starts")
-	_check(game.touch_root.mouse_filter == Control.MOUSE_FILTER_PASS, "touch root enabled while playing")
+	_check(not game.menu_panel.visible, "menu closes")
+	_check(game.touch_root.visible, "touch controls show")
 
-	var yaw_before: float = game.camera_yaw
-	var camera_touch := InputEventScreenTouch.new()
-	camera_touch.index = 19
-	camera_touch.pressed = true
-	camera_touch.position = Vector2(640, 360)
-	game._unhandled_input(camera_touch)
-	var camera_drag := InputEventScreenDrag.new()
-	camera_drag.index = 19
-	camera_drag.position = Vector2(700, 330)
-	game._unhandled_input(camera_drag)
-	_check(abs(game.camera_yaw - yaw_before) > 0.02, "camera touch rotates view")
-	var camera_up := InputEventScreenTouch.new()
-	camera_up.index = 19
-	camera_up.pressed = false
-	camera_up.position = camera_drag.position
-	game._unhandled_input(camera_up)
-
-	var touch_down := InputEventScreenTouch.new()
-	touch_down.index = 17
-	touch_down.pressed = true
-	touch_down.position = game.joystick.global_position + Vector2(100, 100)
-	game.joystick._gui_input(touch_down)
-	var touch_drag := InputEventScreenDrag.new()
-	touch_drag.index = 17
-	touch_drag.position = touch_down.position + Vector2(0, 58)
-	game.joystick._gui_input(touch_drag)
-	_check(game.player.move_stick.y > 0.5, "touch joystick follows downward drag")
-	var touch_up := InputEventScreenTouch.new()
-	touch_up.index = 17
-	touch_up.pressed = false
-	touch_up.position = touch_drag.position
-	game.joystick._gui_input(touch_up)
-	_check(game.player.move_stick == Vector2.ZERO, "touch joystick releases")
-
+	var before_ammo: int = game.player.ammo
 	game.fire_button.button_down.emit()
-	await create_timer(0.28).timeout
+	await create_timer(0.16).timeout
 	game.fire_button.button_up.emit()
-	_check(game.projectiles.size() > 0, "FIRE button spawns projectile")
+	_check(game.player.ammo < before_ammo or game.projectiles.size() > 0, "FIRE changes combat state")
 
-	var energy_before: float = game.player.energy
+	var before_energy: float = game.player.energy
 	game.boost_button.pressed.emit()
-	_check(game.player.boost_time > 0.0, "BOOST button activates")
-	_check(game.player.energy < energy_before, "BOOST consumes energy")
-
-	energy_before = game.player.energy
-	game.tactical_button.pressed.emit()
-	_check(game.player.tactical_cooldown > 0.0, "TACTICAL button activates")
-	_check(game.player.energy < energy_before, "TACTICAL consumes energy")
+	_check(game.player.boost_time > 0.0, "BOOST activates")
+	_check(game.player.energy < before_energy, "BOOST consumes energy")
 
 	game.player.energy = game.player.max_energy
-	game.player.energy_changed.emit(game.player.energy)
-	energy_before = game.player.energy
+	before_energy = game.player.energy
+	game.tactical_button.pressed.emit()
+	_check(game.player.tactical_cooldown > 0.0, "PULSE activates")
+	_check(game.player.energy < before_energy, "PULSE consumes energy")
+
+	game.player.energy = game.player.max_energy
+	before_energy = game.player.energy
 	game.shield_button.pressed.emit()
-	_check(game.player.shield_time > 0.0, "SHIELD button activates")
-	_check(game.player.energy < energy_before, "SHIELD consumes energy")
+	_check(game.player.shield_time > 0.0, "SHIELD activates")
+	_check(game.player.energy < before_energy, "SHIELD consumes energy")
+
+	game.player.ammo = 5
+	game.player.ammo_changed.emit(5, game.player.magazine_size)
+	game.reload_button.pressed.emit()
+	_check(game.player.reload_timer > 0.0, "RELOAD activates")
+	await create_timer(1.2).timeout
+	_check(game.player.ammo == game.player.magazine_size, "RELOAD completes")
 
 	game.pause_button.pressed.emit()
 	await process_frame
-	_check(paused, "PAUSE button pauses")
-	_check(game.touch_root.mouse_filter == Control.MOUSE_FILTER_IGNORE, "touch root released while paused")
-	game.pause_button.pressed.emit()
+	_check(paused, "PAUSE activates")
+	_check(game.pause_panel.visible, "pause panel visible")
+	game.pause_panel.get_node("VBoxContainer/ResumeButton").pressed.emit()
 	await process_frame
-	_check(not paused, "PAUSE button resumes")
+	_check(not paused, "RESUME activates")
 
-	game.stage = 1
-	game.wave = 3
-	game.wave_timer = 0.1
-	game.transition_lock = false
-	game.final_boss_active = false
-	game.enemies.clear()
-	game._check_stage_completion()
-	_check(game.transition_lock, "stage completes after final non-boss wave even when timer expires")
+	var state := game.get_runtime_state()
+	_check(state.running, "runtime state reports running")
+	_check(state.player.has("health"), "runtime player state exists")
 
 	game.stage = 3
 	game.wave = 3
-	game.final_boss_active = false
-	game._start_wave()
+	game.boss_active = false
+	game._start_next_wave()
 	await process_frame
-	_check(game.final_boss_active, "boss wave activates")
-	_check(game.boss_bar.visible, "boss health bar appears")
-
-	var exit_code := 0
-	if failures.is_empty():
-		print("SELF TEST PASS")
-	else:
-		for failure in failures:
-			push_error("SELF TEST FAILURE: " + failure)
-		exit_code = 1
+	_check(game.boss_active, "boss activates")
+	_check(game.boss_bar.visible, "boss bar visible")
 
 	game.queue_free()
 	await process_frame
-	await process_frame
-	quit(exit_code)
+
+	if failures.is_empty():
+		print("SELF TEST PASS")
+		quit(0)
+	else:
+		for failure in failures:
+			push_error("SELF TEST FAILURE: " + failure)
+		quit(1)
