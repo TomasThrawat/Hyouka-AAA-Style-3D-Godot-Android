@@ -57,6 +57,7 @@ jobs:
           echo "XCURSOR_THEME=DMZ-White" >> "$GITHUB_ENV"
           echo "XCURSOR_SIZE=24" >> "$GITHUB_ENV"
           echo "XCURSOR_PATH=$RUNNER_TEMP/xcursor-overlay:/usr/share/icons:/usr/share/pixmaps" >> "$GITHUB_ENV"
+          echo "XCURSOR_PATH=/usr/share/icons:/usr/share/pixmaps" >> "$GITHUB_ENV"
 
       - name: Configure persistent headless Wayland
         run: |
@@ -74,7 +75,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           rm -f "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY"
-          nohup weston             --backend=headless-backend.so             --socket="$WAYLAND_DISPLAY"             --width=1280             --height=720             --idle-time=0             --no-config             >"$RUNNER_TEMP/weston.log" 2>&1 &
+          nohup weston             --backend=headless-backend.so             --shell=kiosk-shell.so             --socket="$WAYLAND_DISPLAY"             --width=1280             --height=720             --idle-time=0             --no-config             >"$RUNNER_TEMP/weston.log" 2>&1 &
           echo $! > "$RUNNER_TEMP/weston.pid"
           for _ in $(seq 1 40); do
             if [ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]; then
@@ -121,7 +122,6 @@ jobs:
           LIBGL_ALWAYS_SOFTWARE: "1"
           GALLIUM_DRIVER: "llvmpipe"
           NO_AT_BRIDGE: "1"
-          GODOT_WAYLAND_DISABLE_LIBDECOR: "1"
         run: |
           set -Eeuo pipefail
           test -n "$WAYLAND_DISPLAY"
