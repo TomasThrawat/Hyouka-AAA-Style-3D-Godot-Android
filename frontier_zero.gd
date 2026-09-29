@@ -83,6 +83,8 @@ var shield_button: Button
 var reload_button: Button
 
 func _ready() -> void:
+	if not OS.has_environment("CI") and DisplayServer.get_name() != "headless" and DisplayServer.has_feature(DisplayServer.FEATURE_SWAP_BUFFERS):
+		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED)
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	seed(Time.get_ticks_msec())
 	Engine.max_fps = 60
@@ -977,12 +979,17 @@ func _impact(position: Vector3, tint: Color, power: float) -> void:
 	add_child(fx)
 	fx_nodes.append(fx)
 	fx.finished.connect(_on_fx_finished.bind(fx), CONNECT_ONE_SHOT)
+	var cleanup_timer: SceneTreeTimer = get_tree().create_timer(fx.lifetime + 0.60)
+	cleanup_timer.timeout.connect(_on_fx_finished.bind(fx), CONNECT_ONE_SHOT)
 	fx.emitting = true
 
-func _on_fx_finished(effect: GPUParticles3D):
+func _on_fx_finished(effect: GPUParticles3D) -> void:
 	fx_nodes.erase(effect)
-	if is_instance_valid(effect):
-		effect.queue_free()
+	if not is_instance_valid(effect):
+		return
+	if effect.is_queued_for_deletion():
+		return
+	effect.queue_free()
 
 func _flash(tint: Color, alpha: float) -> void:
 	flash.modulate = Color(tint.r, tint.g, tint.b, 0.0)

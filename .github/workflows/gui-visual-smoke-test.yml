@@ -38,10 +38,11 @@ jobs:
             exit 0
           fi
           timeout 180 sudo apt-get update -o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20
-          timeout 180 sudo apt-get install -y --no-install-recommends xvfb x11-utils curl unzip python3 file
+          timeout 180 sudo apt-get install -y --no-install-recommends xvfb x11-utils curl unzip python3 file xcursor-themes
           for bin in Xvfb xdpyinfo curl unzip python3 file; do
             command -v "$bin" >/dev/null 2>&1
           done
+          dpkg-query -W xcursor-themes >/dev/null 2>&1
 
       - name: Download official Godot 4.7.2 Standard
         run: |
@@ -75,6 +76,8 @@ jobs:
           DISPLAY: :99
           LIBGL_ALWAYS_SOFTWARE: "1"
           NO_AT_BRIDGE: "1"
+          XCURSOR_THEME: "DMZ-White"
+          XCURSOR_SIZE: "24"
         run: |
           set -Eeuo pipefail
           Xvfb :99 -screen 0 1280x720x24 -ac +extension GLX >/tmp/xvfb.log 2>&1 &

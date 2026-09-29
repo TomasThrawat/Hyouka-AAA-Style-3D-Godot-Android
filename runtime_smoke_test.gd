@@ -64,6 +64,7 @@ func _run() -> void:
 	game.player.reload()
 	await create_timer(1.2).timeout
 	_check(game.player.ammo == game.player.magazine_size,"reload completes")
+	_check(game.fx_nodes.is_empty(),"temporary VFX cleaned")
 
 	game.stage = 3
 	game.wave = 3
