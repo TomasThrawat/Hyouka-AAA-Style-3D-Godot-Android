@@ -6,11 +6,12 @@ func _check(condition: bool, label: String) -> void:
 	if not condition:
 		failures.append(label)
 
-func _capture(game, filename: String) -> void:
-	await process_frame
-	await create_timer(0.35).timeout
-	var image := game.get_viewport().get_texture().get_image()
-	image.save_png(filename)
+func _capture(game: Node, filename: String) -> void:
+	await RenderingServer.frame_post_draw
+	await create_timer(0.2).timeout
+	var image: Image = game.get_viewport().get_texture().get_image()
+	var err := image.save_png(filename)
+	_check(err == OK, "save screenshot %s" % filename)
 
 func _click_control(control: Control) -> void:
 	var center := control.get_global_rect().get_center()
@@ -34,9 +35,10 @@ func _run() -> void:
 		quit(1)
 		return
 
-	var game = scene.instantiate()
+	var game: Node = scene.instantiate()
 	root.add_child(game)
 	await process_frame
+	await RenderingServer.frame_post_draw
 	await create_timer(1.0).timeout
 
 	_check(game.fire_button != null, "FIRE button exists")
@@ -72,7 +74,7 @@ func _run() -> void:
 	_check(game.player.energy < energy_before, "visual SHIELD click consumes energy")
 
 	await _capture(game, "build/gui/running.png")
-	
+
 	await _click_control(game.pause_button)
 	await process_frame
 	_check(paused, "visual PAUSE click pauses")
