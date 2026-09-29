@@ -19,7 +19,7 @@ func _run() -> void:
 	var game = scene.instantiate()
 	root.add_child(game)
 	await process_frame
-	await create_timer(0.4).timeout
+	await create_timer(0.35).timeout
 
 	_check(game.player != null,"player exists")
 	_check(game.start_button != null,"DEPLOY exists")
@@ -33,7 +33,7 @@ func _run() -> void:
 
 	game._start_game_pressed()
 	await create_timer(0.35).timeout
-	_check(game.running,"game starts")
+	_check(game.running,"DEPLOY starts")
 	_check(game.touch_root.visible,"touch controls visible")
 
 	var ammo_before: int = game.player.ammo
@@ -68,16 +68,20 @@ func _run() -> void:
 	game.stage = 3
 	game.wave = 3
 	game.transition_lock = false
+	game.boss_active = false
 	game._start_next_wave()
 	await process_frame
 	_check(game.boss_active,"boss activates")
+	_check(game.boss_bar.visible,"boss bar visible")
 
-	game.queue_free()
+	game.free()
+	await process_frame
 	await process_frame
 
 	if failures.is_empty():
 		print("SELF TEST PASS")
 		quit(0)
-	for failure in failures:
-		push_error("SELF TEST FAILURE: " + failure)
-	quit(1)
+	else:
+		for failure in failures:
+			push_error("SELF TEST FAILURE: " + failure)
+		quit(1)
