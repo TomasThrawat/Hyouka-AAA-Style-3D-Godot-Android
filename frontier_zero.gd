@@ -15,6 +15,8 @@ const MAP_INFO := [
 	"Frozen relay // exposed lanes"
 ]
 const STAGES := ["NIGHTFALL", "SUNFALL", "WHITEOUT"]
+const MAX_ENEMIES: int = 20
+const MAX_PROJECTILES: int = 26
 
 var player: CharacterBody3D
 var camera: Camera3D
@@ -898,6 +900,10 @@ func _update_camera(delta: float) -> void:
 	if shake > 0.0:
 		camera.global_position += Vector3(randf_range(-shake, shake), randf_range(-shake, shake), 0)
 
+func _on_joystick(value: Vector2) -> void:
+	if is_instance_valid(player):
+		player.set_move_input(value)
+
 func _cleanup() -> void:
 	for i in range(enemies.size() - 1, -1, -1):
 		if not is_instance_valid(enemies[i]):
@@ -977,6 +983,21 @@ func _flash(tint: Color, alpha: float) -> void:
 func _set_message(value: String, duration: float) -> void:
 	message_label.text = value
 	message_timer = duration
+
+func _update_hud() -> void:
+	if not is_instance_valid(player):
+		return
+	var index: int = clamp(stage - 1, 0, STAGES.size() - 1)
+	stage_label.text = "SECTOR %02d / %s" % [stage, STAGES[index]]
+	wave_label.text = "WAVE %02d | THREATS %02d" % [wave, enemies.size()]
+	score_label.text = "SCORE %06d" % score
+	combo_label.text = "COMBO x%d" % combo
+	var state: Dictionary = player.get_state()
+	var reload_text: String = "RELOADING" if float(state["reloadTimer"]) > 0.0 else "RELOAD READY"
+	var pulse_text: String = "PULSE %.1f" % float(state["pulseCooldown"]) if float(state["pulseCooldown"]) > 0.0 else "PULSE READY"
+	var shield_text: String = "SHIELD %.1f" % float(state["shieldCooldown"]) if float(state["shieldCooldown"]) > 0.0 else "SHIELD READY"
+	status_label.text = "%s    %s    %s" % [reload_text, pulse_text, shield_text]
+	profile_label.text = "%02d FPS | %04.1f ms | Q%d" % [int(fps_value), frame_ms, quality]
 
 func _fullscreen() -> void:
 	if DisplayServer.get_name() != "headless":
