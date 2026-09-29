@@ -118,6 +118,7 @@ func _run() -> void:
 	if failures.is_empty():
 		print("GUI SMOKE TEST PASS")
 		quit(0)
+		return
 	for failure in failures:
 		push_error("GUI SMOKE TEST FAILURE: "+failure)
 	quit(1)
