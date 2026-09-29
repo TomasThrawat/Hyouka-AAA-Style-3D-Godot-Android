@@ -32,8 +32,13 @@ func _click(control: Control) -> void:
 
 func _run() -> void:
 	var game = get_tree().current_scene
+	var deadline := Time.get_ticks_msec() + 5000
+	while game == null and Time.get_ticks_msec() < deadline:
+		await get_tree().process_frame
+		game = get_tree().current_scene
 	_check(game != null, "Main scene running")
 	if game == null:
+		push_error("GUI SMOKE TEST FAILURE: Main scene did not become available within 5 seconds")
 		get_tree().quit(1)
 		return
 	game.process_mode = Node.PROCESS_MODE_ALWAYS
