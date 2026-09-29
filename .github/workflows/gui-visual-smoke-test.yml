@@ -52,7 +52,7 @@ jobs:
           set -Eeuo pipefail
           mkdir -p "$RUNNER_TEMP/godot"
           cd "$RUNNER_TEMP/godot"
-          curl -fsSLO "https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux_x86_64.zip"
+          curl -fsSLO "https://downloads.godotengine.org/4.7.2/Godot_v4.7.2-stable_linux.x86_64.zip"
           curl -fsSLO "https://github.com/godotengine/godot/releases/download/4.7.2-stable/SHA512-SUMS.txt"
           grep "Godot_v4.7.2-stable_linux_x86_64.zip" SHA512-SUMS.txt | sha512sum -c -
           unzip -q "Godot_v4.7.2-stable_linux_x86_64.zip"
