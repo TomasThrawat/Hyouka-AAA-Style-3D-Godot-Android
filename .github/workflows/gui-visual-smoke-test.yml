@@ -23,92 +23,90 @@ jobs:
           GIT_CONFIG_KEY_1: advice.defaultBranchName
           GIT_CONFIG_VALUE_1: false
 
-      - name: Setup .NET 8
-        uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: "8.0.x"
-
       - name: Install GUI dependencies
         run: |
           set -Eeuo pipefail
           need_install=0
-          for bin in weston curl unzip python3 file; do
+          for bin in Xvfb xdpyinfo curl unzip python3 file; do
             if ! command -v "$bin" >/dev/null 2>&1; then
               echo "Missing GUI dependency: $bin"
               need_install=1
             fi
           done
-          if [ "$need_install" -eq 0 ]; then
-            echo "All GUI dependencies are already installed"
-          else
-            timeout 180 sudo apt-get update -o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20
-            timeout 180 sudo apt-get install -y --no-install-recommends weston curl unzip python3 file
+          if [ ! -d /usr/share/icons/Adwaita/cursors ]; then
+            echo "Missing Adwaita cursor theme"
+            need_install=1
           fi
-          for bin in weston curl unzip python3 file; do
-            command -v "$bin" >/dev/null 2>&1
-          done
+          if [ "$need_install" -eq 0 ]; then
+            echo "All GUI dependencies and cursor theme are already installed"
+            exit 0
+          fi
+          timeout 180 sudo apt-get update -o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20
+          timeout 180 sudo apt-get install -y --no-install-recommends             xvfb x11-utils xcursor-themes adwaita-icon-theme             curl unzip python3 file
+          command -v Xvfb
+          command -v xdpyinfo
+          test -d /usr/share/icons/Adwaita/cursors
 
-      - name: Download official Godot 4.7.2 .NET
+      - name: Download official Godot 4.7.2 Standard
         run: |
           set -Eeuo pipefail
           mkdir -p "$RUNNER_TEMP/godot"
           cd "$RUNNER_TEMP/godot"
-          curl -fsSLO "https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_mono_linux_x86_64.zip"
+          curl -fsSLO "https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip"
           curl -fsSLO "https://github.com/godotengine/godot/releases/download/4.7.2-stable/SHA512-SUMS.txt"
-          grep "Godot_v4.7.2-stable_mono_linux_x86_64.zip" SHA512-SUMS.txt | sha512sum -c -
-          unzip -q "Godot_v4.7.2-stable_mono_linux_x86_64.zip"
+          grep "Godot_v4.7.2-stable_linux.x86_64.zip" SHA512-SUMS.txt | sha512sum -c -
+          unzip -q "Godot_v4.7.2-stable_linux.x86_64.zip"
+          test -x "$RUNNER_TEMP/godot/Godot_v4.7.2-stable_linux.x86_64/Godot_v4.7.2-stable_linux.x86_64"
 
       - name: Import project
         env:
-          GODOT_BIN: ${{ runner.temp }}/godot/Godot_v4.7.2-stable_mono_linux_x86_64/Godot_v4.7.2-stable_mono_linux.x86_64
+          GODOT_BIN: ${{ runner.temp }}/godot/Godot_v4.7.2-stable_linux.x86_64/Godot_v4.7.2-stable_linux.x86_64
         run: |
           set -Eeuo pipefail
           "$GODOT_BIN" --headless --editor --path . --quit-after 120 2>&1 | tee "$RUNNER_TEMP/import.log"
-          if grep -Eiq "SCRIPT ERROR|PARSE ERROR|ERROR|FAILED|EXCEPTION|FATAL|CRITICAL|WARNING|DEPRECATED" "$RUNNER_TEMP/import.log"; then
-            cat "$RUNNER_TEMP/import.log"
+          if grep -Eai "SCRIPT ERROR|PARSE ERROR|ERROR|FAILED|EXCEPTION|FATAL|CRITICAL|WARNING|DEPRECATED" "$RUNNER_TEMP/import.log"; then
+            echo "Godot import diagnostics detected"
             exit 1
           fi
 
       - name: Launch graphical Godot smoke test
         env:
-          GODOT_BIN: ${{ runner.temp }}/godot/Godot_v4.7.2-stable_mono_linux_x86_64/Godot_v4.7.2-stable_mono_linux.x86_64
-          XDG_RUNTIME_DIR: ${{ runner.temp }}/wayland-runtime
-          WAYLAND_DISPLAY: wayland-1
-          GODOT_WAYLAND_DISABLE_LIBDECOR: "1"
+          GODOT_BIN: ${{ runner.temp }}/godot/Godot_v4.7.2-stable_linux.x86_64/Godot_v4.7.2-stable_linux.x86_64
+          DISPLAY: ":99"
+          XCURSOR_THEME: Adwaita
+          XCURSOR_PATH: /usr/share/icons
+          XCURSOR_SIZE: "24"
           LIBGL_ALWAYS_SOFTWARE: "1"
           MESA_LOADER_DRIVER_OVERRIDE: llvmpipe
         run: |
           set -Eeuo pipefail
-          mkdir -p "$XDG_RUNTIME_DIR"
-          chmod 700 "$XDG_RUNTIME_DIR"
-
-          weston             --no-config             --backend=headless-backend.so             --renderer=pixman             --socket="$WAYLAND_DISPLAY"             --width=1280             --height=720             --idle-time=0             >/tmp/weston.log 2>&1 &
-          WESTON_PID=$!
-          trap 'kill "$WESTON_PID" 2>/dev/null || true' EXIT
+          Xvfb :99 -screen 0 1280x720x24 -ac +extension GLX >/tmp/xvfb.log 2>&1 &
+          XVFB_PID=$!
+          trap 'kill "$XVFB_PID" 2>/dev/null || true' EXIT
 
           for _ in $(seq 1 50); do
-            if [ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]; then
+            if xdpyinfo -display "$DISPLAY" >/dev/null 2>&1; then
               break
             fi
             sleep 0.2
           done
-          test -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY"
+          xdpyinfo -display "$DISPLAY" >/dev/null 2>&1
 
           set +e
-          "$GODOT_BIN"             --verbose             --path .             --display-driver wayland             --audio-driver Dummy             --windowed             --resolution 1280x720             --script runtime_gui_smoke_test.gd             >"$RUNNER_TEMP/gui.log" 2>&1
+          "$GODOT_BIN"             --verbose             --path .             --display-driver x11             --audio-driver Dummy             --windowed             --resolution 1280x720             --script runtime_gui_smoke_test.gd             >"$RUNNER_TEMP/gui.log" 2>&1
           GODOT_RC=$?
           set -e
 
           cat "$RUNNER_TEMP/gui.log"
-          cat /tmp/weston.log
+          cat /tmp/xvfb.log
 
           GODOT_ISSUES="$(grep -Eai "SCRIPT ERROR|PARSE ERROR|ERROR|FAILED|EXCEPTION|FATAL|CRITICAL|WARNING|DEPRECATED" "$RUNNER_TEMP/gui.log" || true)"
-          WESTON_ISSUES="$(grep -Eai "ERROR|FAILED|EXCEPTION|FATAL|CRITICAL|WARNING|DEPRECATED" /tmp/weston.log || true)"
+          XVFB_ISSUES="$(grep -Eai "ERROR|FAILED|EXCEPTION|FATAL|CRITICAL|WARNING|DEPRECATED" /tmp/xvfb.log || true)"
 
-          if [ -n "$GODOT_ISSUES" ] || [ -n "$WESTON_ISSUES" ]; then
-            echo "Godot/Weston diagnostics detected:"
+          if [ -n "$GODOT_ISSUES" ] || [ -n "$XVFB_ISSUES" ]; then
+            echo "Unexpected Godot/Xvfb diagnostics:"
             printf '%s\n' "$GODOT_ISSUES"
-            printf '%s\n' "$WESTON_ISSUES"
+            printf '%s\n' "$XVFB_ISSUES"
             exit 1
           fi
 
@@ -120,5 +118,5 @@ jobs:
           set -Eeuo pipefail
           cat "$RUNNER_TEMP/import.log"
           cat "$RUNNER_TEMP/gui.log"
-          cat /tmp/weston.log
+          cat /tmp/xvfb.log
           grep -q "GUI SMOKE TEST PASS" "$RUNNER_TEMP/gui.log"
