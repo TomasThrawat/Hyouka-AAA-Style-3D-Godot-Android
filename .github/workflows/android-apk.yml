@@ -112,7 +112,7 @@ jobs:
       - name: Run Godot gameplay self-test
         run: |
           set -Eeuo pipefail
-          "$GODOT_BIN" --headless --path . --script runtime_smoke_test.gd 2>&1 | tee "$RUNNER_TEMP/godot-self-test.log"
+          timeout 120s "$GODOT_BIN" --headless --path . --script runtime_smoke_test.gd 2>&1 | tee "$RUNNER_TEMP/godot-self-test.log"
 
       - name: Export debug APK
         env:

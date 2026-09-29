@@ -3,6 +3,7 @@ extends SceneTree
 var failures: Array[String] = []
 
 func _init() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	call_deferred("_run")
 
 func _check(condition: bool,label: String) -> void:
@@ -31,7 +32,7 @@ func _run() -> void:
 	_check(game.pause_button != null,"PAUSE exists")
 	_check(game.map_buttons.size() == 3,"three missions exist")
 
-	game._start_game_pressed()
+	game._start_game()
 	await create_timer(0.35).timeout
 	_check(game.running,"DEPLOY starts")
 	_check(game.touch_root.visible,"touch controls visible")
@@ -69,7 +70,7 @@ func _run() -> void:
 	game.wave = 3
 	game.transition_lock = false
 	game.boss_active = false
-	game._start_next_wave()
+	game._start_wave()
 	await process_frame
 	_check(game.boss_active,"boss activates")
 	_check(game.boss_bar.visible,"boss bar visible")
