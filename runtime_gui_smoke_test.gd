@@ -6,12 +6,13 @@ func _check(condition: bool, label: String) -> void:
 	if not condition:
 		failures.append(label)
 
-func _capture(game: Node, filename: String) -> void:
+func _capture(game, filename: String) -> void:
 	await RenderingServer.frame_post_draw
 	await create_timer(0.2).timeout
 	var image: Image = game.get_viewport().get_texture().get_image()
 	var err := image.save_png(filename)
 	_check(err == OK, "save screenshot %s" % filename)
+	print("CAPTURED ", filename)
 
 func _click_control(control: Control) -> void:
 	var center := control.get_global_rect().get_center()
@@ -19,28 +20,30 @@ func _click_control(control: Control) -> void:
 	down.button_index = MOUSE_BUTTON_LEFT
 	down.pressed = true
 	down.position = center
-	Input.parse_input_event(down)
+	get_viewport().push_input(down)
 	await process_frame
 	var up := InputEventMouseButton.new()
 	up.button_index = MOUSE_BUTTON_LEFT
 	up.pressed = false
 	up.position = center
-	Input.parse_input_event(up)
+	get_viewport().push_input(up)
 	await process_frame
 
 func _run() -> void:
+	print("GUI TEST: loading scene")
 	var scene := load("res://Main.tscn")
 	_check(scene != null, "Main.tscn loads")
 	if scene == null:
 		quit(1)
 		return
 
-	var game: Node = scene.instantiate()
+	var game = scene.instantiate()
 	root.add_child(game)
 	await process_frame
 	await RenderingServer.frame_post_draw
 	await create_timer(1.0).timeout
 
+	print("GUI TEST: menu")
 	_check(game.fire_button != null, "FIRE button exists")
 	_check(game.boost_button != null, "BOOST button exists")
 	_check(game.tactical_button != null, "TACTICAL button exists")
@@ -50,15 +53,18 @@ func _run() -> void:
 	await _capture(game, "build/gui/menu.png")
 	_check(game.running == false, "menu starts stopped")
 
+	print("GUI TEST: FIRE")
 	await _click_control(game.fire_button)
 	await create_timer(0.25).timeout
 	_check(game.projectiles.size() > 0, "visual FIRE click spawns projectile")
 
+	print("GUI TEST: BOOST")
 	var energy_before: float = game.player.energy
 	await _click_control(game.boost_button)
 	_check(game.player.boost_time > 0.0, "visual BOOST click activates")
 	_check(game.player.energy < energy_before, "visual BOOST click consumes energy")
 
+	print("GUI TEST: TACTICAL")
 	game.player.energy = game.player.max_energy
 	game.player.energy_changed.emit(game.player.energy)
 	energy_before = game.player.energy
@@ -66,6 +72,7 @@ func _run() -> void:
 	_check(game.player.tactical_cooldown > 0.0, "visual TACTICAL click activates")
 	_check(game.player.energy < energy_before, "visual TACTICAL click consumes energy")
 
+	print("GUI TEST: SHIELD")
 	game.player.energy = game.player.max_energy
 	game.player.energy_changed.emit(game.player.energy)
 	energy_before = game.player.energy
@@ -75,6 +82,7 @@ func _run() -> void:
 
 	await _capture(game, "build/gui/running.png")
 
+	print("GUI TEST: PAUSE")
 	await _click_control(game.pause_button)
 	await process_frame
 	_check(paused, "visual PAUSE click pauses")
