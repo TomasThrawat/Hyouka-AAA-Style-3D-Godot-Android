@@ -3,7 +3,6 @@ extends SceneTree
 var failures: Array[String] = []
 
 func _init() -> void:
-	process_mode = Node.PROCESS_MODE_ALWAYS
 	call_deferred("_run")
 
 func _check(condition: bool,label: String) -> void:
