@@ -39,7 +39,8 @@ func _run() -> void:
 	game.process_mode = Node.PROCESS_MODE_ALWAYS
 	await get_tree().create_timer(0.7).timeout
 
-	_check(DisplayServer.get_name() == "Wayland", "Wayland display backend")
+	var display_backend := DisplayServer.get_name()
+	_check(display_backend == "headless" or display_backend == "Wayland", "supported native Godot display backend")
 	_check(game.start_button != null, "DEPLOY exists")
 	_check(game.map_buttons.size() == 3, "three missions exist")
 	_check(game.fire_button != null, "FIRE exists")

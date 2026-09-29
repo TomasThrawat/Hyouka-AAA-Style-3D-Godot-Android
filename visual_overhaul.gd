@@ -146,8 +146,10 @@ func _add_hud():
 
     var footer = ColorRect.new()
     footer.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-    footer.position = Vector2(28, -74)
-    footer.size = Vector2(1224, 48)
+    footer.offset_left = 28.0
+    footer.offset_top = -74.0
+    footer.offset_right = -28.0
+    footer.offset_bottom = -26.0
     footer.color = PANEL
     footer.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(footer)
