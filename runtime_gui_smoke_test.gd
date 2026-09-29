@@ -20,13 +20,13 @@ func _click_control(control: Control) -> void:
 	down.button_index = MOUSE_BUTTON_LEFT
 	down.pressed = true
 	down.position = center
-	get_viewport().push_input(down)
+	root.get_viewport().push_input(down)
 	await process_frame
 	var up := InputEventMouseButton.new()
 	up.button_index = MOUSE_BUTTON_LEFT
 	up.pressed = false
 	up.position = center
-	get_viewport().push_input(up)
+	root.get_viewport().push_input(up)
 	await process_frame
 
 func _run() -> void:
