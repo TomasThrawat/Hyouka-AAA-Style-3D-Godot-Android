@@ -27,7 +27,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           timeout 180 sudo apt-get update -o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20
-          timeout 180 sudo apt-get install -y --no-install-recommends weston curl unzip python3 file xcursor-themes libxcursor1
+          timeout 180 sudo apt-get install -y --no-install-recommends weston curl unzip python3 file xcursor-themes libxcursor1 libdecor-0-0 libdecor-0-plugin-1-cairo
           command -v weston
           command -v curl
           command -v unzip
@@ -57,7 +57,6 @@ jobs:
           echo "XCURSOR_THEME=DMZ-White" >> "$GITHUB_ENV"
           echo "XCURSOR_SIZE=24" >> "$GITHUB_ENV"
           echo "XCURSOR_PATH=$RUNNER_TEMP/xcursor-overlay:/usr/share/icons:/usr/share/pixmaps" >> "$GITHUB_ENV"
-          echo "XCURSOR_PATH=/usr/share/icons:/usr/share/pixmaps" >> "$GITHUB_ENV"
 
       - name: Configure persistent headless Wayland
         run: |
@@ -130,8 +129,7 @@ jobs:
           unset DISPLAY
           trap 'if [ -f "$RUNNER_TEMP/weston.pid" ]; then kill "$(cat "$RUNNER_TEMP/weston.pid")" 2>/dev/null || true; fi' EXIT
           set +e
-          set +e
-          timeout 120s "$GODOT_BIN"             --display-driver wayland             --rendering-method gl_compatibility             --rendering-driver opengl3             --audio-driver Dummy             --windowed             --resolution 1280x720             --verbose             --log-file "$RUNNER_TEMP/godot-runtime.log"             --path . >"$RUNNER_TEMP/gui.log" 2>&1
+          timeout 120s "$GODOT_BIN"             --display-driver wayland             --rendering-method gl_compatibility             --rendering-driver opengl3             --audio-driver Dummy             --fullscreen             --resolution 1280x720             --verbose             --log-file "$RUNNER_TEMP/godot-runtime.log"             --path . >"$RUNNER_TEMP/gui.log" 2>&1
           GODOT_RC=$?
           set -e
           cat "$RUNNER_TEMP/gui.log"
