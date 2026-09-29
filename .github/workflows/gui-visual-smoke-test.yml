@@ -56,10 +56,12 @@ jobs:
           curl -fsSLO "https://github.com/godotengine/godot/releases/download/4.7.2-stable/SHA512-SUMS.txt"
           grep "Godot_v4.7.2-stable_linux.x86_64.zip" SHA512-SUMS.txt | sha512sum -c -
           unzip -q "Godot_v4.7.2-stable_linux.x86_64.zip"
-          GODOT_FOUND="$(find "$RUNNER_TEMP/godot" -maxdepth 3 -type f -name "Godot_v4.7.2-stable_linux.x86_64" -perm -111 -print -quit)"
+          GODOT_FOUND="$(find "$RUNNER_TEMP/godot" -type f -perm -111 -name "*linux.x86_64" -print -quit)"
           test -n "$GODOT_FOUND"
+          printf '%s\n' "Godot binary: $GODOT_FOUND"
           ln -sfn "$GODOT_FOUND" "$RUNNER_TEMP/godot/Godot"
           test -x "$RUNNER_TEMP/godot/Godot"
+          "$RUNNER_TEMP/godot/Godot" --version
 
       - name: Import project
         env:
