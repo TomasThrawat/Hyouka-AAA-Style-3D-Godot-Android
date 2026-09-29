@@ -87,7 +87,7 @@ var shield_button: Button
 var reload_button: Button
 
 func _ready() -> void:
-	rand_seed(Time.get_ticks_msec())
+	seed(Time.get_ticks_msec())
 	Engine.max_fps = 60
 	save_system = SAVE_SCRIPT.new()
 	add_child(save_system)
@@ -105,13 +105,12 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	elapsed += delta
-	message_timer = max(0.0, message_timer - delta)
-	combo_timer = max(0.0, combo_timer - delta)
+	message_timer = max(0.0,message_timer-delta)
+	combo_timer = max(0.0,combo_timer-delta)
 	hud_timer -= delta
-	camera_shake = max(0.0, camera_shake - delta)
-	fps_value = lerp(fps_value, 1.0 / max(delta, 0.0001), 0.08)
-	frame_ms = 1000.0 / max(fps_value, 1.0)
-
+	camera_shake = max(0.0,camera_shake-delta)
+	fps_value = lerp(fps_value,1.0/max(delta,0.0001),0.08)
+	frame_ms = 1000.0/max(fps_value,1.0)
 	if combo_timer <= 0.0:
 		combo_count = 0
 
@@ -126,13 +125,12 @@ func _process(delta: float) -> void:
 			_start_next_wave()
 		if pickup_timer <= 0.0:
 			_spawn_pickup()
-			pickup_timer = randf_range(5.0, 8.0)
+			pickup_timer = randf_range(5.0,8.0)
 		_check_progression()
 
 	if hud_timer <= 0.0:
 		hud_timer = 0.10
 		_update_hud()
-
 	if message_timer <= 0.0 and not boss_active:
 		message_label.text = ""
 
@@ -154,7 +152,7 @@ func _build_environment() -> void:
 	add_child(world_environment)
 
 	var sun := DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-52, -28, 0)
+	sun.rotation_degrees = Vector3(-52,-28,0)
 	sun.light_energy = 1.18
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 55.0
@@ -163,7 +161,6 @@ func _build_environment() -> void:
 func _build_arena() -> void:
 	if is_instance_valid(arena_root):
 		arena_root.queue_free()
-
 	arena_root = Node3D.new()
 	arena_root.name = "World"
 	add_child(arena_root)
@@ -177,24 +174,27 @@ func _build_arena() -> void:
 		floor_color = Color("#101923")
 		accent = Color("#8de3ff")
 
-	_make_box(Vector3(0,-0.45,0), Vector3(82,0.9,82), floor_color)
-	_make_box(Vector3(0,2.8,-41), Vector3(82,6,0.7), Color("#10151f"))
-	_make_box(Vector3(0,2.8,41), Vector3(82,6,0.7), Color("#10151f"))
-	_make_box(Vector3(-41,2.8,0), Vector3(0.7,6,82), Color("#10151f"))
-	_make_box(Vector3(41,2.8,0), Vector3(0.7,6,82), Color("#10151f"))
+	_make_box(Vector3(0,-0.45,0),Vector3(82,0.9,82),floor_color)
+	_make_box(Vector3(0,2.8,-41),Vector3(82,6,0.7),Color("#10151f"))
+	_make_box(Vector3(0,2.8,41),Vector3(82,6,0.7),Color("#10151f"))
+	_make_box(Vector3(-41,2.8,0),Vector3(0.7,6,82),Color("#10151f"))
+	_make_box(Vector3(41,2.8,0),Vector3(0.7,6,82),Color("#10151f"))
 
 	for i in range(16):
-		var angle: float = float(i) * TAU / 16.0 + randf_range(-0.08,0.08)
+		var angle: float = float(i)*TAU/16.0 + randf_range(-0.08,0.08)
 		var radius: float = randf_range(11.0,31.0)
-		_make_obstacle(Vector3(cos(angle)*radius,0,sin(angle)*radius), randf_range(1.0,2.1), randf_range(2.5,6.5), accent)
+		_make_obstacle(Vector3(cos(angle)*radius,0,sin(angle)*radius),randf_range(1.0,2.1),randf_range(2.5,6.5),accent)
 
-	var points: Array[Vector3] = [Vector3(-27,0,-27),Vector3(27,0,-27),Vector3(-27,0,27),Vector3(27,0,27)]
+	var points: Array[Vector3] = [
+		Vector3(-27,0,-27),Vector3(27,0,-27),
+		Vector3(-27,0,27),Vector3(27,0,27)
+	]
 	var station_count: int = 2 if selected_map == 1 else 4
 	for i in range(station_count):
 		var station := STATION_SCENE.instantiate()
 		station.name = "Station_%02d" % i
 		station.position = points[i]
-		station.scale = Vector3.ONE * (0.82 + selected_map * 0.10)
+		station.scale = Vector3.ONE*(0.82+float(selected_map)*0.10)
 		arena_root.add_child(station)
 
 	atmosphere = GPUParticles3D.new()
@@ -226,7 +226,7 @@ func _build_arena() -> void:
 		light.omni_range = 10.0
 		arena_root.add_child(light)
 
-func _make_box(position: Vector3, size: Vector3, color: Color) -> void:
+func _make_box(position: Vector3,size: Vector3,color: Color) -> void:
 	var body := StaticBody3D.new()
 	body.position = position
 	arena_root.add_child(body)
@@ -242,13 +242,13 @@ func _make_box(position: Vector3, size: Vector3, color: Color) -> void:
 	collision.shape = shape
 	body.add_child(collision)
 
-func _make_obstacle(position: Vector3, radius: float, height: float, accent: Color) -> void:
+func _make_obstacle(position: Vector3,radius: float,height: float,accent: Color) -> void:
 	var body := StaticBody3D.new()
-	body.position = position + Vector3.UP * height * 0.5
+	body.position = position+Vector3.UP*height*0.5
 	arena_root.add_child(body)
 	var visual := MeshInstance3D.new()
 	var mesh := CylinderMesh.new()
-	mesh.top_radius = radius * 0.7
+	mesh.top_radius = radius*0.7
 	mesh.bottom_radius = radius
 	mesh.height = height
 	mesh.material = _material(Color("#283340"),0.74,accent,0.28)
@@ -256,11 +256,11 @@ func _make_obstacle(position: Vector3, radius: float, height: float, accent: Col
 	body.add_child(visual)
 	var ring := MeshInstance3D.new()
 	var torus := TorusMesh.new()
-	torus.inner_radius = radius * 0.74
-	torus.outer_radius = radius * 0.82
+	torus.inner_radius = radius*0.74
+	torus.outer_radius = radius*0.82
 	torus.material = _material(accent,0.24,accent,1.8)
 	ring.mesh = torus
-	ring.position.y = height * 0.46
+	ring.position.y = height*0.46
 	body.add_child(ring)
 	var collision := CollisionShape3D.new()
 	var shape := CylinderShape3D.new()
@@ -269,7 +269,7 @@ func _make_obstacle(position: Vector3, radius: float, height: float, accent: Col
 	collision.shape = shape
 	body.add_child(collision)
 
-func _material(albedo: Color, roughness: float, emission: Color, energy: float) -> StandardMaterial3D:
+func _material(albedo: Color,roughness: float,emission: Color,energy: float) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = albedo
 	mat.roughness = roughness
@@ -338,7 +338,6 @@ func _build_ui() -> void:
 
 	health_bar = _bar("HealthBar",Vector2(26,602),Vector2(280,24),layer)
 	energy_bar = _bar("EnergyBar",Vector2(26,636),Vector2(280,16),layer)
-
 	var hp := _label("HULL INTEGRITY",12)
 	hp.position = Vector2(28,577)
 	hp.size = Vector2(200,20)
@@ -410,7 +409,6 @@ func _build_ui() -> void:
 	var meta := _label("THIRD-PERSON // SINGLE PLAYER // ANDROID",12)
 	meta.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	menu.add_child(meta)
-
 	var mission := _label("MISSION SELECT",12)
 	mission.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	menu.add_child(mission)
@@ -444,16 +442,13 @@ func _build_ui() -> void:
 	pause_box.alignment = BoxContainer.ALIGNMENT_CENTER
 	pause_box.add_theme_constant_override("separation",12)
 	pause_panel.add_child(pause_box)
-
-	var pause_title := _label("PAUSED",44)
-	pause_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	pause_box.add_child(pause_title)
-
+	var paused_title := _label("PAUSED",44)
+	paused_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	pause_box.add_child(paused_title)
 	var resume := _button("RESUME",Vector2(280,54),19)
 	resume.name = "ResumeButton"
 	resume.pressed.connect(_toggle_pause)
 	pause_box.add_child(resume)
-
 	var home := _button("MAIN MENU",Vector2(280,52),18)
 	home.name = "MainMenuButton"
 	home.pressed.connect(_show_menu)
@@ -464,7 +459,7 @@ func _build_ui() -> void:
 	_build_touch_controls()
 	_set_touch_controls_visible(false)
 
-func _bar(node_name: String, position: Vector2, size: Vector2, parent: CanvasLayer) -> ProgressBar:
+func _bar(node_name: String,position: Vector2,size: Vector2,parent: CanvasLayer) -> ProgressBar:
 	var bar := ProgressBar.new()
 	bar.name = node_name
 	bar.max_value = 100.0
@@ -475,7 +470,7 @@ func _bar(node_name: String, position: Vector2, size: Vector2, parent: CanvasLay
 	parent.add_child(bar)
 	return bar
 
-func _button(value: String, minimum: Vector2, font_size: int) -> Button:
+func _button(value: String,minimum: Vector2,font_size: int) -> Button:
 	var b := Button.new()
 	b.text = value
 	b.custom_minimum_size = minimum
@@ -496,7 +491,7 @@ func _button(value: String, minimum: Vector2, font_size: int) -> Button:
 	b.add_theme_stylebox_override("pressed",pressed)
 	return b
 
-func _label(value: String, size: int) -> Label:
+func _label(value: String,size: int) -> Label:
 	var l := Label.new()
 	l.text = value
 	l.add_theme_font_size_override("font_size",size)
@@ -530,35 +525,31 @@ func _build_touch_controls() -> void:
 
 	fire_button = _button("FIRE",Vector2(170,102),22)
 	fire_button.name = "FireButton"
-	touch_root.add_child(fire_button)
 	fire_button.button_down.connect(func() -> void: player.set_fire_input(true))
 	fire_button.button_up.connect(func() -> void: player.set_fire_input(false))
+	touch_root.add_child(fire_button)
 	touch_controls.append(fire_button)
 
 	boost_button = _button("BOOST",Vector2(150,60),17)
 	boost_button.name = "BoostButton"
-	boost_button.position = Vector2(910,548)
 	boost_button.pressed.connect(_boost_pressed)
 	touch_root.add_child(boost_button)
 	touch_controls.append(boost_button)
 
 	tactical_button = _button("PULSE",Vector2(150,60),17)
 	tactical_button.name = "TacticalButton"
-	tactical_button.position = Vector2(910,478)
 	tactical_button.pressed.connect(func() -> void: player.tactical())
 	touch_root.add_child(tactical_button)
 	touch_controls.append(tactical_button)
 
 	shield_button = _button("SHIELD",Vector2(150,60),17)
 	shield_button.name = "ShieldButton"
-	shield_button.position = Vector2(910,618)
 	shield_button.pressed.connect(func() -> void: player.shield())
 	touch_root.add_child(shield_button)
 	touch_controls.append(shield_button)
 
 	reload_button = _button("RELOAD",Vector2(150,52),16)
 	reload_button.name = "ReloadButton"
-	reload_button.position = Vector2(1080,570)
 	reload_button.pressed.connect(func() -> void: player.reload())
 	touch_root.add_child(reload_button)
 	touch_controls.append(reload_button)
@@ -590,7 +581,6 @@ func _select_map(index: int) -> void:
 	for i in range(map_buttons.size()):
 		map_buttons[i].text = ("[ SELECTED ] " if i == selected_map else "") + MAP_NAMES[i]
 	_build_arena()
-	_retheme()
 	if player:
 		player.position = Vector3(0,0.15,17)
 
@@ -658,8 +648,11 @@ func _start_next_wave() -> void:
 		_set_message("WARDEN PRIME // BOSS SIGNAL",0.0)
 		_play_sound("boss")
 		return
-	var count: int = min(MAX_ENEMIES,3 + stage * 2 + wave * 2)
-	var difficulty: float = 0.8 + stage * 0.45 + wave * 0.14
+	if stage < 3 and wave > 3:
+		wave_timer = 9999.0
+		return
+	var count: int = min(MAX_ENEMIES,3+stage*2+wave*2)
+	var difficulty: float = 0.8+stage*0.45+wave*0.14
 	for i in range(count):
 		var roll: int = randi_range(0,99)
 		var kind: String = "scout"
@@ -670,6 +663,7 @@ func _start_next_wave() -> void:
 		_spawn_enemy(kind,difficulty,false)
 	objective_label.text = "SURVIVE WAVE %02d" % wave
 	_set_message("WAVE %02d // INBOUND" % wave,1.0)
+	_play_sound("stage")
 
 func _spawn_enemy(kind: String,difficulty: float,boss: bool) -> void:
 	if enemies.size() >= MAX_ENEMIES and not boss:
@@ -725,40 +719,36 @@ func _update_projectiles(delta: float) -> void:
 			projectiles.remove_at(i)
 			continue
 		if shot.friendly:
-			var hit: bool = false
 			for enemy in enemies:
 				if is_instance_valid(enemy) and enemy.has_method("take_damage"):
-					if shot.global_position.distance_to(enemy.global_position + Vector3.UP*0.85) <= shot.hit_radius:
+					if shot.global_position.distance_to(enemy.global_position+Vector3.UP*0.85) <= shot.hit_radius:
 						enemy.take_damage(shot.damage)
 						score += 5
 						_spawn_impact_fx(shot.global_position,Color("#8be7ff"),1.0)
 						shot.queue_free()
 						projectiles.remove_at(i)
-						hit = true
 						break
-			if hit:
-				continue
 		elif is_instance_valid(player):
-			if shot.global_position.distance_to(player.global_position + Vector3.UP*0.8) <= shot.hit_radius:
+			if shot.global_position.distance_to(player.global_position+Vector3.UP*0.8) <= shot.hit_radius:
 				player.take_damage(shot.damage)
 				_spawn_impact_fx(shot.global_position,Color("#ff665e"),1.2)
 				shot.queue_free()
 				projectiles.remove_at(i)
-				continue
-		if abs(shot.global_position.x) > 45.0 or abs(shot.global_position.z) > 45.0:
-			shot.queue_free()
+		if i < projectiles.size() and (abs(shot.global_position.x) > 45.0 or abs(shot.global_position.z) > 45.0):
+			if is_instance_valid(shot):
+				shot.queue_free()
 			projectiles.remove_at(i)
 
 func _spawn_pickup() -> void:
 	var pickup := Node3D.new()
 	pickup.name = "EnergyCell"
-	var sphere := MeshInstance3D.new()
-	var mesh := SphereMesh.new()
-	mesh.radius = 0.42
-	mesh.height = 0.84
-	mesh.material = _material(Color("#9be9ff"),0.1,Color("#59d9ff"),4.0)
-	sphere.mesh = mesh
-	pickup.add_child(sphere)
+	var visual := MeshInstance3D.new()
+	var sphere := SphereMesh.new()
+	sphere.radius = 0.42
+	sphere.height = 0.84
+	sphere.material = _material(Color("#9be9ff"),0.1,Color("#59d9ff"),4.0)
+	visual.mesh = sphere
+	pickup.add_child(visual)
 	pickup.position = Vector3(randf_range(-30.0,30.0),0.9,randf_range(-30.0,30.0))
 	arena_root.add_child(pickup)
 	pickups.append(pickup)
@@ -769,7 +759,7 @@ func _update_pickups(delta: float) -> void:
 		if not is_instance_valid(pickup):
 			pickups.remove_at(i)
 			continue
-		pickup.rotation.y += delta * 2.6
+		pickup.rotation.y += delta*2.6
 		if player.global_position.distance_to(pickup.global_position) < 1.8:
 			player.heal(14.0)
 			player.restore_energy(30.0)
@@ -790,9 +780,14 @@ func _on_enemy_defeated(enemy: Node3D,boss: bool) -> void:
 		save_system.save_state(4,score,best_score)
 		_set_message("WARDEN PRIME // NEUTRALIZED",3.0)
 		objective_label.text = "CAMPAIGN COMPLETE"
+		game_over = true
+		running = false
+		_set_touch_controls_visible(false)
+		pause_button.hide()
 	else:
-		score += 250 + stage * 75 + wave * 25 + combo_count * 20
+		score += 250 + stage*75 + wave*25 + combo_count*20
 		_spawn_impact_fx(enemy.global_position+Vector3.UP,Color("#74d8ff"),1.4)
+		_play_sound("hit")
 
 func _check_progression() -> void:
 	if transition_lock or boss_active or enemies.size() > 0 or wave < 3:
@@ -805,7 +800,7 @@ func _check_progression() -> void:
 		transition_lock = false
 
 func _complete_stage() -> void:
-	score += stage * 1200
+	score += stage*1200
 	best_score = max(best_score,score)
 	save_system.save_state(stage+1,score,best_score)
 	var tween := create_tween()
@@ -841,7 +836,7 @@ func _on_player_tactical(origin: Vector3,direction: Vector3) -> void:
 		if is_instance_valid(enemy) and enemy.has_method("take_damage"):
 			var distance: float = origin.distance_to(enemy.global_position+Vector3.UP*0.8)
 			if distance <= 7.2:
-				enemy.take_damage(95.0 - distance*5.0)
+				enemy.take_damage(95.0-distance*5.0)
 	_spawn_impact_fx(origin,Color("#68dcff"),3.2)
 	_flash_screen(Color("#6ddcff"),0.30)
 	_set_message("PULSE // SHOCKWAVE",0.9)
@@ -862,9 +857,10 @@ func _on_ammo(current: int,capacity: int) -> void:
 	ammo_label.text = "AMMO %02d / %02d" % [current,capacity]
 
 func _on_player_died() -> void:
+	if game_over:
+		return
 	game_over = true
 	running = false
-	boss_active = false
 	best_score = max(best_score,score)
 	save_system.save_state(stage,score,best_score)
 	_set_message("MISSION FAILED // PROGRESS SAVED",2.8)
@@ -890,7 +886,7 @@ func _on_joystick_released() -> void:
 func _update_camera(delta: float) -> void:
 	if not is_instance_valid(player):
 		return
-	var desired := player.global_position + Vector3(0,6.7,10) + Basis(Vector3.UP,camera_yaw) * Vector3(0,0,8.5)
+	var desired := player.global_position+Vector3(0,6.7,10)+Basis(Vector3.UP,camera_yaw)*Vector3(0,0,8.5)
 	camera.global_position = camera.global_position.lerp(desired,min(1.0,delta*7.0))
 	camera.rotation = Vector3(camera_pitch,camera_yaw,0)
 	if camera_shake > 0.0:
@@ -903,7 +899,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		var touch := event as InputEventScreenTouch
 		var size: Vector2 = get_viewport().get_visible_rect().size
-		if touch.position.x > size.x * 0.45 and touch.position.y < size.y * 0.72:
+		if touch.position.x > size.x*0.45 and touch.position.y < size.y*0.72:
 			if touch.pressed:
 				camera_touch_id = touch.index
 				camera_touch_last = touch.position
@@ -912,10 +908,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventScreenDrag and camera_touch_id >= 0:
 		var drag := event as InputEventScreenDrag
 		if drag.index == camera_touch_id:
-			var d: Vector2 = drag.position - camera_touch_last
+			var d: Vector2 = drag.position-camera_touch_last
 			camera_touch_last = drag.position
-			camera_yaw -= d.x * 0.01
-			camera_pitch = clamp(camera_pitch - d.y * 0.01,-0.6,-0.05)
+			camera_yaw -= d.x*0.01
+			camera_pitch = clamp(camera_pitch-d.y*0.01,-0.6,-0.05)
 
 func _update_hud() -> void:
 	if not is_instance_valid(player):
@@ -1013,7 +1009,7 @@ func _spawn_boost_fx() -> void:
 		mesh.size = Vector3(0.12,0.12,1.25)
 		mesh.material = _material(Color("#72ddff"),0.12,Color("#66d6ff"),2.6)
 		fx.mesh = mesh
-		fx.position = player.global_position + Vector3(randf_range(-0.45,0.45),randf_range(0.2,1.2),0.6)
+		fx.position = player.global_position+Vector3(randf_range(-0.45,0.45),randf_range(0.2,1.2),0.6)
 		add_child(fx)
 		fx_nodes.append(fx)
 		var tween := create_tween()
