@@ -22,13 +22,13 @@ func _click(control: Control) -> void:
 	down.pressed = true
 	down.position = point
 	Input.parse_input_event(down)
-	await process_frame
+	await get_tree().process_frame
 	var up := InputEventMouseButton.new()
 	up.button_index = MOUSE_BUTTON_LEFT
 	up.pressed = false
 	up.position = point
 	Input.parse_input_event(up)
-	await process_frame
+	await get_tree().process_frame
 
 func _run() -> void:
 	var game = get_tree().current_scene
@@ -91,18 +91,18 @@ func _run() -> void:
 	_check(game.fx_nodes.is_empty(), "temporary VFX cleaned")
 
 	await _click(game.pause_button)
-	await process_frame
+	await get_tree().process_frame
 	_check(get_tree().paused, "PAUSE pauses")
 	_check(game.pause_panel.visible, "pause panel visible")
 
 	await _click(game.resume_button)
-	await process_frame
+	await get_tree().process_frame
 	_check(not get_tree().paused, "RESUME resumes")
 
 	game.stage = 3
 	game.wave = 3
 	game._start_wave()
-	await process_frame
+	await get_tree().process_frame
 	_check(game.boss_active, "boss activates")
 	_check(game.boss_bar.visible, "boss bar visible")
 
@@ -110,9 +110,9 @@ func _run() -> void:
 	game.queue_free()
 	remove_child(game)
 	game = null
-	await process_frame
-	await process_frame
-	await process_frame
+	await get_tree().process_frame
+	await get_tree().process_frame
+	await get_tree().process_frame
 
 	if failures.is_empty():
 		print("GUI SMOKE TEST PASS")

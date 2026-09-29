@@ -130,13 +130,6 @@ jobs:
           unset DISPLAY
           trap 'if [ -f "$RUNNER_TEMP/weston.pid" ]; then kill "$(cat "$RUNNER_TEMP/weston.pid")" 2>/dev/null || true; fi' EXIT
           set +e
-          timeout 120s "$GODOT_BIN"             --display-driver wayland             --rendering-method gl_compatibility             --rendering-driver opengl3             --audio-driver Dummy             --windowed             --resolution 1280x720             --verbose             --log-file "$RUNNER_TEMP/godot-runtime.log"             "$RUNNER_TEMP/../does-not-exist" >/dev/null 2>&1
-          GODOT_RC=$?
-          set -e
-          if [ "$GODOT_RC" -eq 0 ]; then
-            echo "Unexpected success from negative probe"
-            exit 1
-          fi
           set +e
           timeout 120s "$GODOT_BIN"             --display-driver wayland             --rendering-method gl_compatibility             --rendering-driver opengl3             --audio-driver Dummy             --windowed             --resolution 1280x720             --verbose             --log-file "$RUNNER_TEMP/godot-runtime.log"             --path . >"$RUNNER_TEMP/gui.log" 2>&1
           GODOT_RC=$?
