@@ -87,13 +87,19 @@ jobs:
             sleep 0.2
           done
           xdpyinfo -display "$DISPLAY" >/dev/null 2>&1
-          timeout 120s "$GODOT_BIN" --display-server x11 --audio-driver Dummy --windowed --resolution 1280x720 --script runtime_gui_smoke_test.gd >"$RUNNER_TEMP/gui.log" 2>&1
+          set +e
+          timeout 120s "$GODOT_BIN" --display-driver x11 --rendering-method gl_compatibility --rendering-driver opengl3 --audio-driver Dummy --windowed --resolution 1280x720 --verbose --log-file "$RUNNER_TEMP/godot-runtime.log" --script runtime_gui_smoke_test.gd >"$RUNNER_TEMP/gui.log" 2>&1
+          GODOT_RC=$?
+          set -e
           cat "$RUNNER_TEMP/gui.log"
+          test -f "$RUNNER_TEMP/godot-runtime.log" || true
+          cat "$RUNNER_TEMP/godot-runtime.log" 2>/dev/null || true
           if grep -Eai "SCRIPT ERROR|PARSE ERROR|ERROR|FAILED|EXCEPTION|FATAL|CRITICAL|WARNING|DEPRECATED" "$RUNNER_TEMP/gui.log"; then
             echo "Unexpected Godot diagnostics detected"
             exit 1
           fi
           grep -q "GUI SMOKE TEST PASS" "$RUNNER_TEMP/gui.log"
+          test "$GODOT_RC" -eq 0
 
       - name: Read complete Godot logs
         run: |
