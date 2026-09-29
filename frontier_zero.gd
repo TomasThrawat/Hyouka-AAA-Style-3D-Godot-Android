@@ -83,6 +83,7 @@ var shield_button: Button
 var reload_button: Button
 
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	seed(Time.get_ticks_msec())
 	Engine.max_fps = 60
 	save_system = SAVE_SCENE.new()

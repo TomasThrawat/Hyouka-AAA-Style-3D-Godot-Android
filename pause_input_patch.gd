@@ -10,18 +10,11 @@ func _process(_delta: float) -> void:
 	if scene == null:
 		return
 	var pause := scene.find_child("PauseButton", true, false) as Button
-	var touch_root := scene.find_child("TouchRoot", true, false) as Control
 	var pause_panel := scene.find_child("PauseMenu", true, false) as Control
 	var resume := scene.find_child("ResumeButton", true, false) as Button
 	var home := scene.find_child("MainMenuButton", true, false) as Button
-	if pause == null or touch_root == null:
+	if pause == null:
 		return
-	if pause.get_parent() != touch_root:
-		pause.reparent(touch_root, true)
-	var size: Vector2 = scene.get_viewport().get_visible_rect().size
-	pause.position = Vector2(max(24.0, size.x - 100.0), 55.0)
-	pause.z_index = 1000
-	pause.mouse_filter = Control.MOUSE_FILTER_STOP
 	pause.process_mode = Node.PROCESS_MODE_ALWAYS
 	if pause_panel != null:
 		pause_panel.process_mode = Node.PROCESS_MODE_ALWAYS
@@ -31,40 +24,6 @@ func _process(_delta: float) -> void:
 		home.process_mode = Node.PROCESS_MODE_ALWAYS
 	set_process(false)
 
-func _input(event: InputEvent) -> void:
-	var scene := get_tree().current_scene
-	if scene == null or not scene.has_method("get_runtime_state"):
-		return
-
-	var point := Vector2.ZERO
-	var pressed := false
-	if event is InputEventMouseButton:
-		var mouse := event as InputEventMouseButton
-		point = mouse.position
-		pressed = mouse.pressed and mouse.button_index == MOUSE_BUTTON_LEFT
-	elif event is InputEventScreenTouch:
-		var touch := event as InputEventScreenTouch
-		point = touch.position
-		pressed = touch.pressed
-
-	if not pressed:
-		return
-
-	if scene.get_tree().paused:
-		var resume := scene.find_child("ResumeButton", true, false) as Button
-		var home := scene.find_child("MainMenuButton", true, false) as Button
-		if home != null and home.visible and home.get_global_rect().has_point(point):
-			home.emit_signal("pressed")
-			get_viewport().set_input_as_handled()
-			return
-		if resume != null and resume.visible and resume.get_global_rect().has_point(point):
-			resume.emit_signal("pressed")
-			get_viewport().set_input_as_handled()
-			return
-		return
-
-	if bool(scene.running) and not bool(scene.game_over):
-		var pause := scene.find_child("PauseButton", true, false) as Button
-		if pause != null and pause.visible and pause.get_global_rect().has_point(point):
-			pause.emit_signal("pressed")
-			get_viewport().set_input_as_handled()
+func _input(_event: InputEvent) -> void:
+	# Pause/resume are handled by the game's own native _input method.
+	pass
