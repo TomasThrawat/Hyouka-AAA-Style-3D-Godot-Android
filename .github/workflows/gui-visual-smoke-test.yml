@@ -92,7 +92,7 @@ jobs:
           sed -i 's#^window/vsync/vsync_mode=.*$#window/vsync/vsync_mode=0#' project.godot
           grep -q '^window/vsync/vsync_mode=0$' project.godot
 
-          "$GODOT_BIN" --path . --display-driver x11 --audio-driver Dummy --windowed --resolution 1280x720 --disable-vsync --script runtime_gui_smoke_test.gd 2>&1 | tee "$RUNNER_TEMP/gui.log"
+          "$GODOT_BIN" --path . --display-driver x11 --audio-driver Dummy --windowed --resolution 1280x720 --script runtime_gui_smoke_test.gd 2>&1 | tee "$RUNNER_TEMP/gui.log"
           if grep -Eiq "SCRIPT ERROR|PARSE ERROR|ERROR|FAILED|EXCEPTION|FATAL|CRITICAL|WARNING|DEPRECATED" "$RUNNER_TEMP/gui.log"; then
             cat "$RUNNER_TEMP/gui.log"
             exit 1
