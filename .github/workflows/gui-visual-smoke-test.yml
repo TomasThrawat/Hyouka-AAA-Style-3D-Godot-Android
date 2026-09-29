@@ -85,7 +85,7 @@ jobs:
           set -Eeuo pipefail
           test -n "${WAYLAND_DISPLAY:-}"
           test -n "${XDG_RUNTIME_DIR:-}"
-          test -z "${DISPLAY:-}"
+          unset DISPLAY
           set +e
           timeout 120s "$GODOT_BIN" --display-server wayland --rendering-method gl_compatibility --rendering-driver opengl3 --audio-driver Dummy --windowed --resolution 1280x720 --verbose --log-file "$RUNNER_TEMP/godot-runtime.log" --script runtime_gui_smoke_test.gd >"$RUNNER_TEMP/gui.log" 2>&1
           GODOT_RC=$?
