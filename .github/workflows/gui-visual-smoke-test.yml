@@ -1,0 +1,74 @@
+name: Godot GUI Visual Smoke Test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gui-smoke-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install GUI test dependencies
+        run: |
+          set -Eeuo pipefail
+          sudo apt-get update
+          sudo apt-get install -y curl unzip xvfb mesa-utils libgl1-mesa-dri libglx-mesa0
+          glxinfo -B || true
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Download Godot 4.7.2 .NET
+        env:
+          GODOT_VERSION: "4.7.2"
+        run: |
+          set -Eeuo pipefail
+          mkdir -p "$RUNNER_TEMP/godot"
+          cd "$RUNNER_TEMP/godot"
+          curl -fsSLO "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_mono_linux_x86_64.zip"
+          curl -fsSLO "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/SHA512-SUMS.txt"
+          grep "Godot_v${GODOT_VERSION}-stable_mono_linux_x86_64.zip" SHA512-SUMS.txt | sha512sum -c -
+          unzip -q "Godot_v${GODOT_VERSION}-stable_mono_linux_x86_64.zip"
+          echo "GODOT_BIN=$RUNNER_TEMP/godot/Godot_v${GODOT_VERSION}-stable_mono_linux_x86_64/Godot_v${GODOT_VERSION}-stable_mono_linux.x86_64" >> "$GITHUB_ENV"
+          "$RUNNER_TEMP/godot/Godot_v${GODOT_VERSION}-stable_mono_linux_x86_64/Godot_v${GODOT_VERSION}-stable_mono_linux.x86_64" --version
+
+      - name: Run Godot GUI smoke test
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          MESA_GL_VERSION_OVERRIDE: "3.3"
+        run: |
+          set -Eeuo pipefail
+          mkdir -p build/gui
+          xvfb-run -a -s "-screen 0 1280x720x24 +extension GLX +render -noreset"             "$GODOT_BIN" --path . --script runtime_gui_smoke_test.gd             2>&1 | tee "$RUNNER_TEMP/godot-gui.log"
+
+      - name: Validate GUI smoke test
+        run: |
+          set -Eeuo pipefail
+          test -s build/gui/menu.png
+          test -s build/gui/running.png
+          test -s build/gui/paused.png
+          grep -F "GUI SMOKE TEST PASS" "$RUNNER_TEMP/godot-gui.log"
+          if grep -Eiq 'SCRIPT ERROR|PARSE ERROR|EXCEPTION|FATAL|CRITICAL' "$RUNNER_TEMP/godot-gui.log"; then
+            echo "Unexpected fatal Godot marker found."
+            exit 1
+          fi
+
+      - name: Upload GUI evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: Hyouka-Godot-GUI-Visual-Evidence
+          path: |
+            build/gui/menu.png
+            build/gui/running.png
+            build/gui/paused.png
+            "$RUNNER_TEMP/godot-gui.log"
+          if-no-files-found: error
+          retention-days: 7
