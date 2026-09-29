@@ -557,6 +557,9 @@ func _build_touch_controls() -> void:
 	touch_controls.append(reload_button)
 
 	get_viewport().size_changed.connect(_layout_touch)
+	if pause_button.get_parent() != touch_root:
+		pause_button.reparent(touch_root, true)
+	pause_button.z_index = 1000
 	_layout_touch()
 
 func _layout_touch() -> void:
@@ -1001,6 +1004,8 @@ func _update_hud() -> void:
 	profile_label.text = "%02d FPS | %04.1f ms | Q%d" % [int(fps_value), frame_ms, quality]
 
 func _fullscreen() -> void:
+	if OS.has_environment("CI"):
+		return
 	if DisplayServer.get_name() != "headless":
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 
