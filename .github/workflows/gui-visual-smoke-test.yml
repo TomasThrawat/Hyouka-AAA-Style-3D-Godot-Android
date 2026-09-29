@@ -19,7 +19,6 @@ jobs:
           set -Eeuo pipefail
           sudo apt-get update
           sudo apt-get install -y curl unzip xvfb mesa-utils libgl1-mesa-dri libglx-mesa0
-          glxinfo -B || true
 
       - name: Setup .NET 8
         uses: actions/setup-dotnet@v6
@@ -47,7 +46,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           mkdir -p build/gui
-          xvfb-run -a -s "-screen 0 1280x720x24 +extension GLX +render -noreset"             "$GODOT_BIN" --path . --script runtime_gui_smoke_test.gd             2>&1 | tee "$RUNNER_TEMP/godot-gui.log"
+          xvfb-run -a -s "-screen 0 1280x720x24 +extension GLX +render -noreset"             "$GODOT_BIN" --display-driver x11 --audio-driver Dummy --path .             --script runtime_gui_smoke_test.gd             2>&1 | tee "$RUNNER_TEMP/godot-gui.log"
 
       - name: Validate GUI smoke test
         run: |
@@ -56,7 +55,7 @@ jobs:
           test -s build/gui/running.png
           test -s build/gui/paused.png
           grep -F "GUI SMOKE TEST PASS" "$RUNNER_TEMP/godot-gui.log"
-          if grep -Eiq 'SCRIPT ERROR|PARSE ERROR|EXCEPTION|FATAL|CRITICAL' "$RUNNER_TEMP/godot-gui.log"; then
+          if grep -Eiq 'SCRIPT ERROR|PARSE ERROR|EXCEPTION|FATAL|CRITICAL|All audio drivers failed' "$RUNNER_TEMP/godot-gui.log"; then
             echo "Unexpected fatal Godot marker found."
             exit 1
           fi
@@ -69,6 +68,6 @@ jobs:
             build/gui/menu.png
             build/gui/running.png
             build/gui/paused.png
-            "$RUNNER_TEMP/godot-gui.log"
+            $RUNNER_TEMP/godot-gui.log
           if-no-files-found: error
           retention-days: 7
