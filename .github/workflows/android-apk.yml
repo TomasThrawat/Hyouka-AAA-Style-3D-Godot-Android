@@ -41,7 +41,24 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: Install build dependencies
-        run: sudo apt-get update && sudo apt-get install -y curl unzip python3 file
+        run: |
+          set -Eeuo pipefail
+          need_install=0
+          for bin in curl unzip python3 file; do
+            if ! command -v "$bin" >/dev/null 2>&1; then
+              echo "Missing build tool: $bin"
+              need_install=1
+            fi
+          done
+          if [ "$need_install" -eq 0 ]; then
+            echo "All required build tools are already installed"
+            exit 0
+          fi
+          timeout 180 sudo apt-get update -o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20
+          timeout 180 sudo apt-get install -y --no-install-recommends curl unzip python3 file
+          for bin in curl unzip python3 file; do
+            command -v "$bin" >/dev/null 2>&1
+          done
 
       - name: Download official Godot 4.7.2 .NET
         env:
