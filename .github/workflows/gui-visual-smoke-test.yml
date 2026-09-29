@@ -15,10 +15,11 @@ jobs:
     env:
       CI: "1"
       CI_GUI_SMOKE: "1"
-      XDG_RUNTIME_DIR: ${{ runner.temp }}/xdg-runtime
+      XDG_RUNTIME_DIR: /tmp/hyouka-xdg-runtime
       WAYLAND_DISPLAY: wayland-1
       GODOT_WAYLAND_DISABLE_LIBDECOR: "1"
       LIBGL_ALWAYS_SOFTWARE: "1"
+
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -74,8 +75,10 @@ jobs:
       - name: Run native graphical Godot smoke test
         run: |
           set -Eeuo pipefail
+          rm -rf "$XDG_RUNTIME_DIR"
           mkdir -p "$XDG_RUNTIME_DIR"
           chmod 700 "$XDG_RUNTIME_DIR"
+
           weston --backend=headless --renderer=pixman --socket="$WAYLAND_DISPLAY" --width=1280 --height=720 --idle-time=0             >"$RUNNER_TEMP/weston.log" 2>&1 &
           WESTON_PID=$!
           trap 'kill "$WESTON_PID" >/dev/null 2>&1 || true' EXIT
