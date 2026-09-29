@@ -25,7 +25,7 @@ func _run() -> void:
 	_check(game.start_button != null,"DEPLOY exists")
 	_check(game.fire_button != null,"FIRE exists")
 	_check(game.boost_button != null,"BOOST exists")
-	_check(game.tactical_button != null,"PULSE exists")
+	_check(game.pulse_button != null,"PULSE exists")
 	_check(game.shield_button != null,"SHIELD exists")
 	_check(game.reload_button != null,"RELOAD exists")
 	_check(game.pause_button != null,"PAUSE exists")
