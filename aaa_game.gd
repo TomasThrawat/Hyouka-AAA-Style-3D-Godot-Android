@@ -9,29 +9,31 @@ const AUDIO_SCRIPT = preload("res://audio_manager.gd")
 const JOYSTICK_SCRIPT = preload("res://joystick.gd")
 const STATION_SCENE = preload("res://assets/orbital_field_station.glb")
 
-const MAP_NAMES := ["NEON DISTRICT", "DUST BASIN", "FROZEN RELAY"]
-const MAP_DESCRIPTIONS := [
-	"Orbital megacity ruins. Dense lanes and elevated industrial cover.",
-	"Industrial desert basin. Long sightlines and thermal haze.",
-	"Arctic relay complex. Exposed lanes and high-contrast lighting."
+const MAP_NAMES: Array[String] = ["NEON DISTRICT", "DUST BASIN", "FROZEN RELAY"]
+const MAP_DESCRIPTIONS: Array[String] = [
+	"Orbital city ruins with dense cover and neon beacons.",
+	"Industrial desert basin with long sight lines and thermal haze.",
+	"Arctic relay complex with exposed lanes and cold high-contrast lighting."
 ]
-const STAGE_NAMES := ["NIGHTFALL", "SUNFALL", "WHITEOUT"]
-const MAX_ENEMIES := 22
-const MAX_PROJECTILES := 28
+const STAGE_NAMES: Array[String] = ["NIGHTFALL", "SUNFALL", "WHITEOUT"]
+
+const MAX_ENEMIES: int = 22
+const MAX_PROJECTILES: int = 28
 
 var player: CharacterBody3D
 var camera: Camera3D
 var environment_node: WorldEnvironment
 var arena_root: Node3D
 var atmosphere: GPUParticles3D
-var audio_manager: Node
 var save_system: Node
+var audio_manager: Node
 var rng := RandomNumberGenerator.new()
 
 var enemies: Array[Node3D] = []
 var projectiles: Array[Node3D] = []
 var pickups: Array[Node3D] = []
 var fx_nodes: Array[Node3D] = []
+var touch_controls: Array[Control] = []
 
 var stage: int = 1
 var wave: int = 0
@@ -44,14 +46,14 @@ var game_over: bool = false
 var boss_active: bool = false
 var transition_lock: bool = false
 
-var elapsed: float = 0.0
 var wave_timer: float = 1.4
 var pickup_timer: float = 5.0
 var message_timer: float = 0.0
 var combo_timer: float = 0.0
-var combo_count: int = 0
 var hud_timer: float = 0.0
 var camera_shake: float = 0.0
+var combo_count: int = 0
+var elapsed: float = 0.0
 var fps_value: float = 60.0
 var frame_ms: float = 16.7
 var camera_yaw: float = 0.0
@@ -70,13 +72,13 @@ var wave_label: Label
 var score_label: Label
 var objective_label: Label
 var message_label: Label
+var combo_label: Label
+var profile_label: Label
 var health_bar: ProgressBar
 var energy_bar: ProgressBar
 var boss_bar: ProgressBar
 var ammo_label: Label
 var cooldown_label: Label
-var profile_label: Label
-var combo_label: Label
 var screen_flash: ColorRect
 var touch_root: Control
 var joystick: Control
@@ -96,7 +98,7 @@ func _ready() -> void:
 	audio_manager = AUDIO_SCRIPT.new()
 	add_child(audio_manager)
 	_build_environment()
-	_build_arena(selected_map)
+	_build_arena()
 	_create_player()
 	_create_camera()
 	_build_ui()
@@ -111,7 +113,10 @@ func _process(delta: float) -> void:
 	camera_shake = max(0.0, camera_shake - delta)
 	if combo_timer <= 0.0:
 		combo_count = 0
-	_update_performance(delta)
+
+	var instant_fps: float = 1.0 / max(delta, 0.0001)
+	fps_value = lerp(fps_value, instant_fps, 0.10)
+	frame_ms = 1000.0 / max(fps_value, 1.0)
 
 	if running and not game_over and not get_tree().paused:
 		wave_timer -= delta
@@ -153,13 +158,13 @@ func _build_environment() -> void:
 
 	var sun := DirectionalLight3D.new()
 	sun.name = "KeyLight"
-	sun.rotation_degrees = Vector3(-52, -28, 0)
+	sun.rotation_degrees = Vector3(-52.0, -28.0, 0.0)
 	sun.light_energy = 1.18
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 55.0
 	add_child(sun)
 
-func _build_arena(map_id: int) -> void:
+func _build_arena() -> void:
 	if is_instance_valid(arena_root):
 		arena_root.queue_free()
 	arena_root = null
@@ -167,61 +172,59 @@ func _build_arena(map_id: int) -> void:
 	arena_root.name = "World"
 	add_child(arena_root)
 
-	var floor_color := Color("#111725")
-	var accent := Color("#53d4ff")
-	if map_id == 1:
+	var floor_color: Color = Color("#111725")
+	var accent: Color = Color("#53d4ff")
+	if selected_map == 1:
 		floor_color = Color("#1b1510")
 		accent = Color("#ffae62")
-	elif map_id == 2:
+	elif selected_map == 2:
 		floor_color = Color("#101923")
 		accent = Color("#8de3ff")
 
-	_box(Vector3(0, -0.45, 0), Vector3(82, 0.9, 82), floor_color)
-	_box(Vector3(0, 2.8, -41), Vector3(82, 6, 0.7), Color("#10151f"))
-	_box(Vector3(0, 2.8, 41), Vector3(82, 6, 0.7), Color("#10151f"))
-	_box(Vector3(-41, 2.8, 0), Vector3(0.7, 6, 82), Color("#10151f"))
-	_box(Vector3(41, 2.8, 0), Vector3(0.7, 6, 82), Color("#10151f"))
+	_box(Vector3(0.0, -0.45, 0.0), Vector3(82.0, 0.9, 82.0), floor_color)
+	_box(Vector3(0.0, 2.8, -41.0), Vector3(82.0, 6.0, 0.7), Color("#10151f"))
+	_box(Vector3(0.0, 2.8, 41.0), Vector3(82.0, 6.0, 0.7), Color("#10151f"))
+	_box(Vector3(-41.0, 2.8, 0.0), Vector3(0.7, 6.0, 82.0), Color("#10151f"))
+	_box(Vector3(41.0, 2.8, 0.0), Vector3(0.7, 6.0, 82.0), Color("#10151f"))
 
-	if map_id == 0:
+	if selected_map == 0:
 		for i in range(22):
-			var angle: float = float(i) * TAU / 22.0 + rng.randf_range(-0.06, 0.06)
+			var angle: float = float(i) * TAU / 22.0
 			var radius: float = rng.randf_range(10.0, 33.0)
-			_obstacle(Vector3(cos(angle) * radius, 0, sin(angle) * radius), rng.randf_range(1.0, 2.5), rng.randf_range(2.0, 7.0), accent)
-	elif map_id == 1:
+			_obstacle(Vector3(cos(angle) * radius, 0.0, sin(angle) * radius), rng.randf_range(1.0, 2.5), rng.randf_range(2.0, 7.0), accent)
+	elif selected_map == 1:
 		for row in range(5):
 			for col in range(8):
-				var p := Vector3((col - 3.5) * 8.0, 0, (row - 2.0) * 8.5)
+				var p := Vector3((float(col) - 3.5) * 8.0, 0.0, (float(row) - 2.0) * 8.5)
 				if p.length() > 10.0:
 					_obstacle(p, 1.5, 2.8 + float((row + col) % 4) * 0.6, accent)
 	else:
 		for i in range(18):
-			var p := Vector3((i % 6 - 2.5) * 8.6, 0, (i / 6 - 1.0) * 11.0)
+			var p := Vector3(float(i % 6 - 2) * 8.6, 0.0, float(i / 6 - 1) * 11.0)
 			if p.length() > 9.0:
 				_obstacle(p, 1.15, 3.2 + float(i % 3) * 1.1, accent)
 
-	for i in range(4 if map_id != 1 else 2):
+	var landmark_positions: Array[Vector3] = [
+		Vector3(-27.0, 0.0, -27.0), Vector3(27.0, 0.0, -27.0),
+		Vector3(-27.0, 0.0, 27.0), Vector3(27.0, 0.0, 27.0)
+	]
+	var landmark_count: int = 2 if selected_map == 1 else 4
+	for i in range(landmark_count):
 		var landmark := STATION_SCENE.instantiate()
 		landmark.name = "Station_%02d" % i
-		landmark.position = [Vector3(-27, 0, -27), Vector3(27, 0, -27), Vector3(-27, 0, 27), Vector3(27, 0, 27)][i]
-		landmark.scale = Vector3.ONE * (0.82 + map_id * 0.10)
+		landmark.position = landmark_positions[i]
+		landmark.scale = Vector3.ONE * (0.82 + float(selected_map) * 0.10)
 		landmark.rotation.y = float(i) * 0.55
 		arena_root.add_child(landmark)
 
-	for side in [-1.0, 1.0]:
-		for i in range(3):
-			var beacon := MeshInstance3D.new()
-			var beam := CylinderMesh.new()
-			beam.height = 5.0 + i * 1.4
-			beam.top_radius = 0.10
-			beam.bottom_radius = 0.12
-			beam.material = _material(accent, 0.2, accent, 2.2)
-			beacon.mesh = beam
-			beacon.position = Vector3(side * 34.0, beam.height * 0.5, -22.0 + i * 11.0)
-			arena_root.add_child(beacon)
-
 	for i in range(6):
 		var light := OmniLight3D.new()
-		light.position = [Vector3(-18, 6, -8), Vector3(18, 6, -8), Vector3(-20, 4, 18), Vector3(20, 4, 18), Vector3(0, 5, -30), Vector3(0, 5, 30)][i]
+		var positions: Array[Vector3] = [
+			Vector3(-18, 6, -8), Vector3(18, 6, -8),
+			Vector3(-20, 4, 18), Vector3(20, 4, 18),
+			Vector3(0, 5, -30), Vector3(0, 5, 30)
+		]
+		light.position = positions[i]
 		light.light_color = accent if i % 2 == 0 else Color("#8e9bff")
 		light.light_energy = 2.0
 		light.omni_range = 11.0
@@ -249,34 +252,35 @@ func _build_arena(map_id: int) -> void:
 	atmosphere.draw_pass_1 = dust
 	arena_root.add_child(atmosphere)
 
-func _box(pos: Vector3, size: Vector3, color: Color) -> void:
+func _box(position: Vector3, size: Vector3, color: Color) -> void:
 	var body := StaticBody3D.new()
-	body.position = pos
+	body.position = position
 	arena_root.add_child(body)
-	var visual := MeshInstance3D.new()
+	var mesh_instance := MeshInstance3D.new()
 	var mesh := BoxMesh.new()
 	mesh.size = size
 	mesh.material = _material(color, 0.82, Color("#4e6377"), 0.25)
-	visual.mesh = mesh
-	body.add_child(visual)
+	mesh_instance.mesh = mesh
+	body.add_child(mesh_instance)
 	var collision := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
 	shape.size = size
 	collision.shape = shape
 	body.add_child(collision)
 
-func _obstacle(pos: Vector3, radius: float, height: float, accent: Color) -> void:
+func _obstacle(position: Vector3, radius: float, height: float, accent: Color) -> void:
 	var body := StaticBody3D.new()
-	body.position = pos + Vector3.UP * height * 0.5
+	body.position = position + Vector3.UP * height * 0.5
 	arena_root.add_child(body)
-	var visual := MeshInstance3D.new()
+	var mesh_instance := MeshInstance3D.new()
 	var mesh := CylinderMesh.new()
 	mesh.top_radius = radius * 0.70
 	mesh.bottom_radius = radius
 	mesh.height = height
 	mesh.material = _material(Color("#283340"), 0.74, accent, 0.28)
-	visual.mesh = mesh
-	body.add_child(visual)
+	mesh_instance.mesh = mesh
+	body.add_child(mesh_instance)
+
 	var ring := MeshInstance3D.new()
 	var torus := TorusMesh.new()
 	torus.inner_radius = radius * 0.74
@@ -285,6 +289,7 @@ func _obstacle(pos: Vector3, radius: float, height: float, accent: Color) -> voi
 	ring.mesh = torus
 	ring.position.y = height * 0.46
 	body.add_child(ring)
+
 	var collision := CollisionShape3D.new()
 	var shape := CylinderShape3D.new()
 	shape.radius = radius
@@ -361,18 +366,20 @@ func _build_ui() -> void:
 	message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	layer.add_child(message_label)
 
-	health_bar = _bar("HealthBar", 26, -118, 280, 24)
-	energy_bar = _bar("EnergyBar", 26, -84, 280, 16)
+	health_bar = _bar("HealthBar", 26.0, -118.0, 280.0, 24.0)
+	energy_bar = _bar("EnergyBar", 26.0, -84.0, 280.0, 16.0)
+
 	var hp := _label("HULL INTEGRITY", 12)
 	hp.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	hp.position = Vector2(28, -143)
 	hp.size = Vector2(200, 20)
 	layer.add_child(hp)
-	var en := _label("ENERGY CORE", 11)
-	en.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	en.position = Vector2(28, -106)
-	en.size = Vector2(200, 18)
-	layer.add_child(en)
+
+	var energy := _label("ENERGY CORE", 11)
+	energy.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	energy.position = Vector2(28, -106)
+	energy.size = Vector2(200, 18)
+	layer.add_child(energy)
 
 	ammo_label = _label("AMMO 30 / 30", 23)
 	ammo_label.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
@@ -396,8 +403,8 @@ func _build_ui() -> void:
 
 	boss_bar = ProgressBar.new()
 	boss_bar.name = "BossHealth"
-	boss_bar.max_value = 100
-	boss_bar.value = 0
+	boss_bar.max_value = 100.0
+	boss_bar.value = 0.0
 	boss_bar.show_percentage = false
 	boss_bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	boss_bar.position = Vector2(300, 96)
@@ -410,6 +417,7 @@ func _build_ui() -> void:
 	screen_flash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	screen_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	screen_flash.modulate = Color(1, 1, 1, 0)
+	screen_flash.z_index = 400
 	layer.add_child(screen_flash)
 
 	pause_button = _button("PAUSE", Vector2(86, 48), 17)
@@ -422,11 +430,12 @@ func _build_ui() -> void:
 	menu_panel = PanelContainer.new()
 	menu_panel.name = "MainMenu"
 	menu_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
-	menu_panel.z_index = 200
+	menu_panel.z_index = 500
 	var menu := VBoxContainer.new()
 	menu.alignment = BoxContainer.ALIGNMENT_CENTER
 	menu.add_theme_constant_override("separation", 9)
 	menu_panel.add_child(menu)
+
 	var brand := _label("HYOKUA // SYSTEM 7", 14)
 	brand.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	menu.add_child(brand)
@@ -439,6 +448,7 @@ func _build_ui() -> void:
 	var meta := _label("TACTICAL THIRD-PERSON // SINGLE PLAYER // ANDROID", 12)
 	meta.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	menu.add_child(meta)
+
 	var mission := _label("MISSION SELECT", 12)
 	mission.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	menu.add_child(mission)
@@ -459,6 +469,7 @@ func _build_ui() -> void:
 	start_button.name = "StartButton"
 	start_button.pressed.connect(_start_game_pressed)
 	menu.add_child(start_button)
+
 	layer.add_child(menu_panel)
 
 	pause_panel = PanelContainer.new()
@@ -466,22 +477,26 @@ func _build_ui() -> void:
 	pause_panel.set_anchors_preset(Control.PRESET_CENTER)
 	pause_panel.position = Vector2(-220, -170)
 	pause_panel.size = Vector2(440, 340)
-	pause_panel.z_index = 150
+	pause_panel.z_index = 350
 	var pause_box := VBoxContainer.new()
 	pause_box.alignment = BoxContainer.ALIGNMENT_CENTER
 	pause_box.add_theme_constant_override("separation", 12)
 	pause_panel.add_child(pause_box)
+
 	var paused_title := _label("PAUSED", 44)
 	paused_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	pause_box.add_child(paused_title)
+
 	var resume := _button("RESUME", Vector2(280, 54), 19)
 	resume.name = "ResumeButton"
 	resume.pressed.connect(_toggle_pause)
 	pause_box.add_child(resume)
+
 	var home := _button("MAIN MENU", Vector2(280, 52), 18)
 	home.name = "MainMenuButton"
 	home.pressed.connect(_show_menu)
 	pause_box.add_child(home)
+
 	var note := _label("PROGRESS AUTO-SAVED", 11)
 	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	pause_box.add_child(note)
@@ -494,8 +509,8 @@ func _build_ui() -> void:
 func _bar(node_name: String, x: float, y: float, width: float, height: float) -> ProgressBar:
 	var bar := ProgressBar.new()
 	bar.name = node_name
-	bar.max_value = 100
-	bar.value = 100
+	bar.max_value = 100.0
+	bar.value = 100.0
 	bar.show_percentage = false
 	bar.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	bar.position = Vector2(x, y)
@@ -503,25 +518,30 @@ func _bar(node_name: String, x: float, y: float, width: float, height: float) ->
 	get_node("HUD").add_child(bar)
 	return bar
 
-func _button(text_value: String, size_value: Vector2, font_size: int) -> Button:
+func _button(text_value: String, button_size: Vector2, font_size: int) -> Button:
 	var button := Button.new()
 	button.text = text_value
-	button.custom_minimum_size = size_value
+	button.custom_minimum_size = button_size
 	button.add_theme_font_size_override("font_size", font_size)
+
 	var normal := StyleBoxFlat.new()
 	normal.bg_color = Color("#121c28cc")
 	normal.border_color = Color("#3d7394")
 	normal.set_border_width_all(1)
 	normal.set_corner_radius_all(12)
+
 	var hover := normal.duplicate()
 	hover.bg_color = Color("#20364acc")
 	hover.border_color = Color("#61d9ff")
+
 	var pressed := normal.duplicate()
 	pressed.bg_color = Color("#3c6075dd")
 	pressed.border_color = Color("#b8f2ff")
+
 	button.add_theme_stylebox_override("normal", normal)
 	button.add_theme_stylebox_override("hover", hover)
 	button.add_theme_stylebox_override("pressed", pressed)
+	button.add_theme_stylebox_override("focus", hover)
 	return button
 
 func _label(text_value: String, font_size: int) -> Label:
@@ -539,6 +559,7 @@ func _build_touch_controls() -> void:
 	layer.name = "TouchControls"
 	layer.layer = 20
 	add_child(layer)
+
 	touch_root = Control.new()
 	touch_root.name = "TouchRoot"
 	touch_root.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -549,16 +570,17 @@ func _build_touch_controls() -> void:
 	joystick.name = "MoveJoystick"
 	joystick.size = Vector2(220, 220)
 	joystick.custom_minimum_size = Vector2(220, 220)
+	joystick.mouse_filter = Control.MOUSE_FILTER_STOP
 	touch_root.add_child(joystick)
-	joystick.value_changed.connect(func(value: Vector2): player.set_move_input(value))
-	joystick.released.connect(func(): player.clear_move_input())
+	joystick.value_changed.connect(_on_joystick_changed)
+	joystick.released.connect(_on_joystick_released)
 	touch_controls.append(joystick)
 
 	fire_button = _button("FIRE", Vector2(170, 102), 22)
 	fire_button.name = "FireButton"
 	touch_root.add_child(fire_button)
-	fire_button.button_down.connect(func(): player.set_fire_input(true))
-	fire_button.button_up.connect(func(): player.set_fire_input(false))
+	fire_button.button_down.connect(func() -> void: player.set_fire_input(true))
+	fire_button.button_up.connect(func() -> void: player.set_fire_input(false))
 	touch_controls.append(fire_button)
 
 	boost_button = _button("BOOST", Vector2(150, 60), 17)
@@ -569,19 +591,19 @@ func _build_touch_controls() -> void:
 
 	tactical_button = _button("PULSE", Vector2(150, 60), 17)
 	tactical_button.name = "TacticalButton"
-	tactical_button.pressed.connect(func(): player.tactical())
+	tactical_button.pressed.connect(func() -> void: player.tactical())
 	touch_root.add_child(tactical_button)
 	touch_controls.append(tactical_button)
 
 	shield_button = _button("SHIELD", Vector2(150, 60), 17)
 	shield_button.name = "ShieldButton"
-	shield_button.pressed.connect(func(): player.shield())
+	shield_button.pressed.connect(func() -> void: player.shield())
 	touch_root.add_child(shield_button)
 	touch_controls.append(shield_button)
 
 	reload_button = _button("RELOAD", Vector2(150, 52), 16)
 	reload_button.name = "ReloadButton"
-	reload_button.pressed.connect(func(): player.reload())
+	reload_button.pressed.connect(func() -> void: player.reload())
 	touch_root.add_child(reload_button)
 	touch_controls.append(reload_button)
 
@@ -591,13 +613,21 @@ func _build_touch_controls() -> void:
 func _layout_touch_controls() -> void:
 	if not touch_root or not joystick:
 		return
-	var size := get_viewport().get_visible_rect().size
+	var size: Vector2 = get_viewport().get_visible_rect().size
 	joystick.position = Vector2(28, max(30.0, size.y - 252.0))
 	fire_button.position = Vector2(max(28.0, size.x - 198.0), max(30.0, size.y - 238.0))
 	reload_button.position = Vector2(max(28.0, size.x - 198.0), max(30.0, size.y - 120.0))
 	boost_button.position = Vector2(max(28.0, size.x - 366.0), max(30.0, size.y - 118.0))
 	tactical_button.position = Vector2(max(28.0, size.x - 366.0), max(30.0, size.y - 188.0))
 	shield_button.position = Vector2(max(28.0, size.x - 366.0), max(30.0, size.y - 48.0))
+
+func _set_touch_controls_visible(value: bool) -> void:
+	if touch_root:
+		touch_root.visible = value
+		touch_root.mouse_filter = Control.MOUSE_FILTER_PASS if value else Control.MOUSE_FILTER_IGNORE
+	for control in touch_controls:
+		if is_instance_valid(control):
+			control.visible = value
 
 func _select_map(index: int) -> void:
 	if running:
@@ -607,9 +637,11 @@ func _select_map(index: int) -> void:
 	for i in range(map_buttons.size()):
 		map_buttons[i].text = ("[ SELECTED ] " if i == selected_map else "") + MAP_NAMES[i]
 	_retheme()
-	_build_arena(selected_map)
-	if player:
-		player.position = _spawn_position()
+	_build_arena()
+	player.position = _spawn_position()
+
+func _ret_theme_unused() -> void:
+	pass
 
 func _retheme() -> void:
 	match selected_map:
@@ -637,6 +669,7 @@ func _begin_run(continue_run: bool) -> void:
 	else:
 		stage = 1
 		score = 0
+
 	wave = 0
 	running = true
 	game_over = false
@@ -675,8 +708,10 @@ func _start_next_wave() -> void:
 	if stage == 3 and wave >= 4:
 		wave_timer = 9999.0
 		return
+
 	wave += 1
 	wave_timer = 18.0
+
 	if stage == 3 and wave == 4:
 		_spawn_enemy("heavy", 3.6, true)
 		boss_active = true
@@ -686,18 +721,20 @@ func _start_next_wave() -> void:
 		_play_sound("boss")
 		return
 
-	var count: int = int(min(MAX_ENEMIES, 3 + stage * 2 + wave * 2))
+	var count: int = min(MAX_ENEMIES, 3 + stage * 2 + wave * 2)
 	var difficulty: float = 0.8 + stage * 0.48 + wave * 0.16
 	for i in range(count):
 		var roll: int = rng.randi_range(0, 99)
-		var kind := "scout"
+		var kind: String = "scout"
 		if stage >= 2 and roll < 33:
 			kind = "striker"
 		if stage >= 3 and roll < 16:
 			kind = "heavy"
 		_spawn_enemy(kind, difficulty, false)
+
 	objective_label.text = "SURVIVE WAVE %02d" % wave
 	_set_message("WAVE %02d // INBOUND" % wave, 1.2)
+	_play_sound("stage")
 
 func _spawn_enemy(kind: String, difficulty: float, boss: bool) -> void:
 	if enemies.size() >= MAX_ENEMIES and not boss:
@@ -727,7 +764,6 @@ func _on_enemy_attack(origin: Vector3, direction: Vector3, damage: float) -> voi
 
 func _on_player_fire(origin: Vector3, direction: Vector3, damage: float) -> void:
 	if running and not game_over and not get_tree().paused:
-		player.set_aim_direction(direction)
 		_spawn_projectile(origin, direction, true, damage, 34.0, 2.7, Color("#75ddff"))
 		_spawn_muzzle_fx(origin, Color("#75ddff"))
 		_play_sound("shoot")
@@ -753,8 +789,9 @@ func _update_projectiles(delta: float) -> void:
 			shot.queue_free()
 			projectiles.remove_at(i)
 			continue
+
 		if shot.friendly:
-			var hit := false
+			var hit: bool = false
 			for enemy in enemies:
 				if is_instance_valid(enemy) and enemy.has_method("take_damage"):
 					if shot.global_position.distance_to(enemy.global_position + Vector3.UP * 0.85) <= shot.hit_radius:
@@ -767,12 +804,14 @@ func _update_projectiles(delta: float) -> void:
 						break
 			if hit:
 				continue
-		elif is_instance_valid(player) and shot.global_position.distance_to(player.global_position + Vector3.UP * 0.8) <= shot.hit_radius:
-			player.take_damage(shot.damage)
-			_spawn_impact_fx(shot.global_position, Color("#ff665e"), 1.2)
-			shot.queue_free()
-			projectiles.remove_at(i)
-			continue
+		elif is_instance_valid(player):
+			if shot.global_position.distance_to(player.global_position + Vector3.UP * 0.8) <= shot.hit_radius:
+				player.take_damage(shot.damage)
+				_spawn_impact_fx(shot.global_position, Color("#ff665e"), 1.2)
+				shot.queue_free()
+				projectiles.remove_at(i)
+				continue
+
 		if abs(shot.global_position.x) > 45.0 or abs(shot.global_position.z) > 45.0:
 			shot.queue_free()
 			projectiles.remove_at(i)
@@ -784,9 +823,10 @@ func _spawn_pickup() -> void:
 	var sphere := SphereMesh.new()
 	sphere.radius = 0.42
 	sphere.height = 0.84
-	sphere.material = _material(Color("#9be9ff"), 0.1, Color("#59d9ff"), 4.0)
+	sphere.material = _material(Color("#9be9ff"), 0.10, Color("#59d9ff"), 4.0)
 	core.mesh = sphere
 	pickup.add_child(core)
+
 	var ring := MeshInstance3D.new()
 	var torus := TorusMesh.new()
 	torus.inner_radius = 0.55
@@ -795,7 +835,8 @@ func _spawn_pickup() -> void:
 	ring.mesh = torus
 	ring.rotation_degrees.x = 90
 	pickup.add_child(ring)
-	pickup.position = Vector3(rng.randf_range(-30, 30), 0.9, rng.randf_range(-30, 30))
+
+	pickup.position = Vector3(rng.randf_range(-30.0, 30.0), 0.9, rng.randf_range(-30.0, 30.0))
 	arena_root.add_child(pickup)
 	pickups.append(pickup)
 
@@ -837,12 +878,12 @@ func _on_enemy_defeated(enemy: Node3D, boss: bool) -> void:
 	else:
 		score += reward
 		_spawn_impact_fx(enemy.global_position + Vector3.UP * 0.8, Color("#74d8ff"), 1.45)
+		_play_sound("hit")
 
 func _check_progression() -> void:
 	if transition_lock or not running or boss_active:
 		return
-	var final_wave: bool = (stage < 3 and wave >= 3) or (stage == 3 and wave >= 3)
-	if final_wave and enemies.is_empty():
+	if wave >= 3 and enemies.is_empty():
 		transition_lock = true
 	_complete_stage()
 
@@ -853,16 +894,17 @@ func _complete_stage() -> void:
 	if stage >= 3:
 		_win_game()
 		return
+
 	_set_message("SECTOR %02d // CLEAR" % stage, 2.4)
 	objective_label.text = "AUTO-SAVE COMPLETE // NEXT OPERATION UNLOCKED"
 	var tween := create_tween()
 	tween.tween_interval(2.4)
-	tween.tween_callback(func():
+	tween.tween_callback(func() -> void:
 		stage += 1
 		wave = 0
 		transition_lock = false
 		_clear_dynamic()
-		_build_arena(selected_map)
+		_build_arena()
 		player.position = _spawn_position()
 		wave_timer = 1.4
 		objective_label.text = _stage_objective()
@@ -875,6 +917,7 @@ func _on_player_boost() -> void:
 	camera_shake = max(camera_shake, 0.08)
 	_spawn_boost_fx()
 	_set_message("BOOST // ENGAGED", 0.9)
+	_play_sound("dash")
 
 func _boost_pressed() -> void:
 	if running and not game_over and not get_tree().paused:
@@ -884,20 +927,21 @@ func _on_player_tactical(origin: Vector3, direction: Vector3) -> void:
 	if not running or game_over or get_tree().paused:
 		return
 	camera_shake = max(camera_shake, 0.25)
-	var radius: float = 7.2
 	for enemy in enemies.duplicate():
 		if is_instance_valid(enemy) and enemy.has_method("take_damage"):
 			var distance: float = origin.distance_to(enemy.global_position + Vector3.UP * 0.8)
-			if distance <= radius:
-				var falloff: float = 1.0 - clamp(distance / radius, 0.0, 1.0) * 0.45
+			if distance <= 7.2:
+				var falloff: float = 1.0 - clamp(distance / 7.2, 0.0, 1.0) * 0.45
 				enemy.take_damage((105.0 + stage * 12.0) * falloff)
 	_spawn_impact_fx(origin, Color("#68dcff"), 3.8)
 	_flash_screen(Color("#6ddcff"), 0.34)
 	_set_message("PULSE // SHOCKWAVE", 1.0)
+	_play_sound("explode")
 
 func _on_player_shield() -> void:
 	_flash_screen(Color("#6fa9ff"), 0.22)
 	_set_message("SHIELD // ACTIVE", 1.0)
+	_play_sound("stage")
 
 func _on_player_health(value: float) -> void:
 	health_bar.value = value
@@ -928,6 +972,7 @@ func _on_player_died() -> void:
 func _win_game() -> void:
 	game_over = true
 	running = false
+	boss_active = false
 	best_score = max(best_score, score)
 	save_system.save_state(4, score, best_score)
 	_set_message("CAMPAIGN COMPLETE // %06d" % score, 4.5)
@@ -944,21 +989,29 @@ func _toggle_pause() -> void:
 	get_tree().paused = not get_tree().paused
 	pause_panel.visible = get_tree().paused
 	_set_touch_controls_visible(not get_tree().paused)
+	_play_sound("stage" if get_tree().paused else "hit")
+
+func _on_joystick_changed(value: Vector2) -> void:
+	player.set_move_input(value)
+
+func _on_joystick_released() -> void:
+	player.clear_move_input()
 
 func _update_camera(delta: float) -> void:
 	var desired := player.global_position + Vector3(0, 6.7, 10.0) + Basis(Vector3.UP, camera_yaw) * Vector3(0, 0, 8.5)
 	camera.global_position = camera.global_position.lerp(desired, min(1.0, delta * 7.0))
 	camera.rotation = Vector3(camera_pitch, camera_yaw, 0.0)
 	if camera_shake > 0.0:
-		camera.global_position += Vector3(rng.randf_range(-camera_shake, camera_shake), rng.randf_range(-camera_shake, camera_shake), 0)
+		camera.global_position += Vector3(rng.randf_range(-camera_shake, camera_shake), rng.randf_range(-camera_shake, camera_shake), 0.0)
+	player.set_aim_direction(-camera.global_transform.basis.z)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not running or get_tree().paused:
 		return
 	if event is InputEventScreenTouch:
 		var touch := event as InputEventScreenTouch
-		var size := get_viewport().get_visible_rect().size
-		if touch.position.x > size.x * 0.45 and touch.position.y < size.y * 0.72:
+		var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+		if touch.position.x > viewport_size.x * 0.45 and touch.position.y < viewport_size.y * 0.72:
 			if touch.pressed:
 				camera_touch_id = touch.index
 				camera_touch_last = touch.position
@@ -967,10 +1020,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventScreenDrag and camera_touch_id >= 0:
 		var drag := event as InputEventScreenDrag
 		if drag.index == camera_touch_id:
-			var delta := drag.position - camera_touch_last
+			var move_delta: Vector2 = drag.position - camera_touch_last
 			camera_touch_last = drag.position
-			camera_yaw -= delta.x * 0.01
-			camera_pitch = clamp(camera_pitch - delta.y * 0.01, -0.60, -0.05)
+			camera_yaw -= move_delta.x * 0.01
+			camera_pitch = clamp(camera_pitch - move_delta.y * 0.01, -0.60, -0.05)
 
 func _update_hud() -> void:
 	if not is_instance_valid(player):
@@ -985,23 +1038,6 @@ func _update_hud() -> void:
 	var shield_text: String = "SHIELD %.1f" % float(state["shieldCooldown"]) if float(state["shieldCooldown"]) > 0.0 else "SHIELD READY"
 	cooldown_label.text = "%s    %s    %s" % [reload_text, pulse_text, shield_text]
 	profile_label.text = "%02d FPS | %04.1f ms | Q%d" % [int(fps_value), frame_ms, quality_level]
-
-func _update_performance(delta: float) -> void:
-	if delta <= 0.0001:
-		return
-	var instant_fps: float = 1.0 / delta
-	fps_value = lerp(fps_value, instant_fps, 0.10)
-	frame_ms = 1000.0 / max(fps_value, 1.0)
-	if quality_level > 0 and fps_value < 38.0:
-		quality_level -= 1
-		_apply_quality()
-	elif quality_level < 2 and fps_value > 57.0:
-		quality_level += 1
-		_apply_quality()
-
-func _apply_quality() -> void:
-	if atmosphere:
-		atmosphere.amount = 90 if quality_level == 2 else (48 if quality_level == 1 else 18)
 
 func _cleanup_enemies() -> void:
 	for i in range(enemies.size() - 1, -1, -1):
@@ -1028,7 +1064,7 @@ func _clear_dynamic() -> void:
 			node.queue_free()
 	fx_nodes.clear()
 
-func _spawn_muzzle_fx(pos: Vector3, tint: Color) -> void:
+func _spawn_muzzle_fx(position: Vector3, tint: Color) -> void:
 	if quality_level == 0:
 		return
 	var ring := MeshInstance3D.new()
@@ -1037,26 +1073,26 @@ func _spawn_muzzle_fx(pos: Vector3, tint: Color) -> void:
 	torus.outer_radius = 0.22
 	torus.material = _material(tint, 0.08, tint, 3.2)
 	ring.mesh = torus
-	ring.position = pos
+	ring.position = position
 	add_child(ring)
 	fx_nodes.append(ring)
 	var tween := create_tween()
 	tween.tween_property(ring, "scale", Vector3.ONE * 2.4, 0.10)
-	tween.tween_callback(func():
+	tween.tween_callback(func() -> void:
 		fx_nodes.erase(ring)
 		if is_instance_valid(ring):
 			ring.queue_free()
 	)
 
-func _spawn_impact_fx(pos: Vector3, tint: Color, power: float) -> void:
+func _spawn_impact_fx(position: Vector3, tint: Color, power: float) -> void:
 	if quality_level == 0 and power < 2.0:
 		return
 	var fx := GPUParticles3D.new()
 	fx.one_shot = true
-	fx.amount = int(8 + power * 4.0) if quality_level == 2 else int(5 + power * 2.5)
+	fx.amount = int(8 + power * 4.0)
 	fx.lifetime = 0.28 + power * 0.05
 	fx.explosiveness = 1.0
-	fx.position = pos
+	fx.position = position
 	var pm := ParticleProcessMaterial.new()
 	pm.direction = Vector3.UP
 	pm.spread = 180.0
@@ -1073,26 +1109,10 @@ func _spawn_impact_fx(pos: Vector3, tint: Color, power: float) -> void:
 	fx.draw_pass_1 = particle
 	add_child(fx)
 	fx_nodes.append(fx)
-
-	var ring := MeshInstance3D.new()
-	var torus := TorusMesh.new()
-	torus.inner_radius = 0.12 * power
-	torus.outer_radius = 0.19 * power
-	torus.material = _material(tint, 0.05, tint, 2.4)
-	ring.mesh = torus
-	ring.position = pos
-	add_child(ring)
-	fx_nodes.append(ring)
-	var tween := create_tween()
-	tween.tween_property(ring, "scale", Vector3.ONE * 2.3, 0.18)
-	tween.tween_callback(func():
-		fx_nodes.erase(ring)
-		if is_instance_valid(ring):
-			ring.queue_free()
-	)
+	fx.emitting = true
 	var cleanup := create_tween()
 	cleanup.tween_interval(fx.lifetime + 0.08)
-	cleanup.tween_callback(func():
+	cleanup.tween_callback(func() -> void:
 		fx_nodes.erase(fx)
 		if is_instance_valid(fx):
 			fx.queue_free()
@@ -1112,14 +1132,14 @@ func _spawn_boost_fx() -> void:
 		fx_nodes.append(marker)
 		var tween := create_tween()
 		tween.tween_property(marker, "scale", Vector3(0.2, 0.2, 2.2), 0.22)
-		tween.tween_callback(func():
+		tween.tween_callback(func() -> void:
 			fx_nodes.erase(marker)
 			if is_instance_valid(marker):
 				marker.queue_free()
 		)
 
-func _set_message(text_value: String, duration: float) -> void:
-	message_label.text = text_value
+func _set_message(value: String, duration: float) -> void:
+	message_label.text = value
 	message_timer = duration
 
 func _flash_screen(tint: Color, alpha: float) -> void:
@@ -1157,18 +1177,16 @@ func get_ui_state() -> Dictionary:
 	var controls: Array[Dictionary] = []
 	for node in find_children("*", "Control", true, false):
 		var control := node as Control
-		if control == null:
-			continue
-		var text_value: String = ""
+		var value: String = ""
 		if control is Button:
-			text_value = (control as Button).text
+			value = (control as Button).text
 		elif control is Label:
-			text_value = (control as Label).text
-		if text_value != "" or control.name in ["MainMenu", "PauseMenu", "TouchRoot"]:
-			var rect := control.get_global_rect()
+			value = (control as Label).text
+		if value != "" or control.name in ["MainMenu", "PauseMenu", "TouchRoot"]:
+			var rect: Rect2 = control.get_global_rect()
 			controls.append({
 				"name": control.name,
-				"text": text_value,
+				"text": value,
 				"visible": control.visible,
 				"disabled": control is Button and (control as Button).disabled,
 				"x": rect.position.x,
